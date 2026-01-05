@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .config import CITY_NAME, BBOX
+from .config import CITY_NAME, BBOX, LOCATIONS
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
@@ -31,7 +31,8 @@ async def get_config():
             "longitude": (BBOX[0] + BBOX[2]) / 2,
             "latitude": (BBOX[1] + BBOX[3]) / 2,
             "zoom": 12
-        }
+        },
+        "locations": LOCATIONS
     }
 
 @app.get("/api/health")

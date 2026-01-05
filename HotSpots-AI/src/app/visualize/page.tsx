@@ -57,26 +57,13 @@ export default function Visualize() {
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [mapContainerRef, setMapContainerRef] = useState<HTMLDivElement | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [searchOptions, setSearchOptions] = useState<{ name: string; coords: [number, number] }[]>([]);
 
   useEffect(() => {
     setLastUpdated(new Date());
   }, []);
 
-  const searchOptions: { name: string; coords: [number, number] }[] = [
-    { name: 'Connaught Place', coords: [28.6304, 77.2177] },
-    { name: 'Hauz Khas Village', coords: [28.5531, 77.1947] },
-    { name: 'Chandni Chowk', coords: [28.6506, 77.2303] },
-    { name: 'Saket', coords: [28.5246, 77.2185] },
-    { name: 'Vasant Kunj', coords: [28.5422, 77.1583] },
-    { name: 'Dwarka', coords: [28.5823, 77.0500] },
-    { name: 'Karol Bagh', coords: [28.6521, 77.1895] },
-    { name: 'Lajpat Nagar', coords: [28.5677, 77.2433] },
-    { name: 'Rohini', coords: [28.7160, 77.1160] },
-    { name: 'Greater Kailash', coords: [28.5482, 77.2372] },
-    { name: 'India Gate', coords: [28.6129, 77.2295] },
-    { name: 'Lodhi Garden', coords: [28.5933, 77.2212] },
-    { name: 'Nehru Place', coords: [28.5492, 77.2523] }
-  ];
+  // Loaded from API
 
   const filteredOptions = searchOptions.filter(option =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -123,6 +110,9 @@ export default function Visualize() {
             ...prev,
             ...config.initial_view
           }));
+        }
+        if (config.locations) {
+          setSearchOptions(config.locations);
         }
       })
       .catch(console.error);
