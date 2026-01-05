@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+rasterio
+geopandas
+scikit-learn
+shapely
+numpy
+earthengine-api
+geemap
+osmnx
