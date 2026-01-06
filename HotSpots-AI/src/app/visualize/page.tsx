@@ -1120,10 +1120,12 @@ export default function Visualize() {
                         <div style={{
                           background: 'rgba(255,255,255,0.03)',
                           borderRadius: '12px',
-                          padding: '14px',
-                          fontSize: '13px',
-                          color: '#e5e7eb',
-                          lineHeight: '1.6',
+                          padding: '16px',
+                          fontSize: '15px',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                          color: '#f3f4f6',
+                          lineHeight: '1.75',
+                          letterSpacing: '0.01em',
                           whiteSpace: 'pre-wrap',
                           marginBottom: '16px',
                           border: '1px solid rgba(255,255,255,0.05)'
