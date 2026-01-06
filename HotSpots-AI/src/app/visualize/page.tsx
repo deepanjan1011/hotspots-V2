@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import DeckGL from '@deck.gl/react';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { ScatterplotLayer } from '@deck.gl/layers';
@@ -182,7 +182,6 @@ export default function Visualize() {
     radiusMaxPixels: 40,
     stroked: false,
     filled: true,
-    filled: true,
     onClick: info => {
       if (info && info.object) {
         setTooltip({
@@ -225,7 +224,22 @@ export default function Visualize() {
     }
   };
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setPlayingAudio(false);
+  };
+
   const playPlan = async () => {
+    if (playingAudio) {
+      stopAudio();
+      return;
+    }
+
     if (!aiPlan || !aiPlan.plan) return;
 
     if (aiPlan.is_mock) {
@@ -246,6 +260,7 @@ export default function Visualize() {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
+      audioRef.current = audio;
       audio.onended = () => setPlayingAudio(false);
       audio.play();
     } catch (e) {
@@ -647,7 +662,10 @@ export default function Visualize() {
                     fontSize: '14px',
                     boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
                     zIndex: 20,
-                    minWidth: '240px',
+                    minWidth: '300px',
+                    maxWidth: '400px',
+                    maxHeight: '60vh',
+                    overflowY: 'auto',
                     lineHeight: 1.6,
                     border: '1px solid rgba(255,255,255,0.1)',
                     backdropFilter: 'blur(12px)',
@@ -701,26 +719,33 @@ export default function Visualize() {
                         }}>
                           {aiPlan.plan}
                         </div>
-                        <button
-                          onClick={playPlan}
-                          disabled={playingAudio}
-                          style={{
-                            width: '100%',
-                            background: playingAudio ? '#555' : '#0078D4',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white',
-                            padding: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          {playingAudio ? 'Playing...' : '📢 Listen to Plan'}
-                        </button>
+                        <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+                          <InteractiveHoverButton
+                            onClick={playPlan}
+                            disabled={loadingPlan}
+                            style={{
+                              flex: 1,
+                              background: playingAudio ? '#ef4444' : '#0ea5e9', // Red for stop, Blue for play
+                              border: 'none',
+                              color: 'white',
+                              padding: '10px 16px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: '13px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {playingAudio ? (
+                              <>🛑 Stop Audio</>
+                            ) : (
+                              <>🔊 Listen to Plan</>
+                            )}
+                          </InteractiveHoverButton>
+                        </div>
                       </div>
                     )}
                   </div>

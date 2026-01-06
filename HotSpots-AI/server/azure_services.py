@@ -47,6 +47,8 @@ def generate_heat_plan(data: dict):
 
     Provide a concise, numbered list of 3 actionable mitigation strategies for this specific location.
     Make it sound professional but urgent.
+    IMPORTANT: Do NOT use markdown formatting (like **bold** or *italics*). Use plain text only.
+    Use clear numbering like "1. Strategy Name: Description".
     """
 
     try:
