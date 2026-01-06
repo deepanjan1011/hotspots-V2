@@ -30,6 +30,6 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'REPLACE_WITH_YOUR_APP_NAME' # <--- UPDATE THIS
+          app-name: 'hotspots-backend-api-deepanjan' # Updated to your real app name
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: './HotSpots-AI/server/release.zip'
