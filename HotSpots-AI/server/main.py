@@ -1,5 +1,10 @@
 import os
 import json
+from dotenv import load_dotenv
+
+load_dotenv() # Load environment variables from .env file
+
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.responses import Response
+from .azure_services import generate_heat_plan, text_to_speech
 
 from .config import CITY_NAME, BBOX, LOCATIONS
 
@@ -49,6 +57,26 @@ async def get_vulnerability_points():
         data = json.load(f)
     return data
 
+
+
+
+class PlanRequest(BaseModel):
+    vulnerability: float
+    bldDensity: float
+    ndvi: float
+    city: str = CITY_NAME
+
+@app.post("/api/generate-plan")
+async def api_generate_plan(request: PlanRequest):
+    return generate_heat_plan(request.dict())
+
+class SpeakRequest(BaseModel):
+    text: str
+
+@app.post("/api/speak-plan")
+async def api_speak_plan(request: SpeakRequest):
+    audio_data = text_to_speech(request.text)
+    return Response(content=audio_data, media_type="audio/wav")
 
 
 if __name__ == "__main__":

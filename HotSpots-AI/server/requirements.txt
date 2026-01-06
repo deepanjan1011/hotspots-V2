@@ -8,3 +8,6 @@ numpy
 earthengine-api
 geemap
 osmnx
+openai
+azure-cognitiveservices-speech
+python-dotenv

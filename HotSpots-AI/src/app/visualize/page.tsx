@@ -36,6 +36,11 @@ type TooltipInfo = {
   vulnerability: number;
 } | null;
 
+type AIPlan = {
+  plan: string;
+  is_mock: boolean;
+};
+
 function formatTime(date: Date | null) {
   if (!date) return 'Loading...';
   let hours = date.getHours();
@@ -58,6 +63,9 @@ export default function Visualize() {
   const [mapContainerRef, setMapContainerRef] = useState<HTMLDivElement | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchOptions, setSearchOptions] = useState<{ name: string; coords: [number, number] }[]>([]);
+  const [aiPlan, setAiPlan] = useState<AIPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState(false);
 
   useEffect(() => {
     setLastUpdated(new Date());
@@ -174,7 +182,8 @@ export default function Visualize() {
     radiusMaxPixels: 40,
     stroked: false,
     filled: true,
-    onHover: info => {
+    filled: true,
+    onClick: info => {
       if (info && info.object) {
         setTooltip({
           x: info.x,
@@ -187,7 +196,64 @@ export default function Visualize() {
         setTooltip(null);
       }
     },
+    updateTriggers: {
+      getFillColor: [quantiles]
+    }
   });
+
+  const generatePlan = async (info: TooltipInfo) => {
+    if (!info) return;
+    setLoadingPlan(true);
+    setAiPlan(null);
+    try {
+      const res = await fetch('/api/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vulnerability: info.vulnerability,
+          bldDensity: info.bldDensity,
+          ndvi: info.ndvi
+        })
+      });
+      const data = await res.json();
+      setAiPlan(data);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate plan");
+    } finally {
+      setLoadingPlan(false);
+    }
+  };
+
+  const playPlan = async () => {
+    if (!aiPlan || !aiPlan.plan) return;
+
+    if (aiPlan.is_mock) {
+      alert("Audio generation requires a valid Azure Speech Key. (This is a mock plan)");
+      return;
+    }
+
+    setPlayingAudio(true);
+    try {
+      const res = await fetch('/api/speak-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: aiPlan.plan.replace(/[#*-]/g, '') }) // Clean markdown for speech
+      });
+
+      if (!res.ok) throw new Error("Audio generation failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setPlayingAudio(false);
+      audio.play();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to play audio (Check Azure Keys)");
+      setPlayingAudio(false);
+    }
+  };
 
   const handleMapLoad = useCallback((event: any) => {
     const map = event.target;
@@ -571,7 +637,7 @@ export default function Visualize() {
                 <div
                   style={{
                     position: 'absolute',
-                    pointerEvents: 'none',
+                    pointerEvents: 'auto',
                     right: '20px',
                     bottom: '20px',
                     background: 'rgba(42, 42, 42, 0.95)',
@@ -603,6 +669,76 @@ export default function Visualize() {
                     <span style={{ color: '#9ca3af', fontWeight: 500 }}>Building Density:</span>
                     <span style={{ fontWeight: 600, color: '#fff' }}>{tooltip.bldDensity.toFixed(3)}</span>
                   </div>
+                  <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+                    {!aiPlan && !loadingPlan && (
+                      <button
+                        onClick={() => generatePlan(tooltip)}
+                        style={{
+                          width: '100%',
+                          background: '#F86D10',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: 'white',
+                          padding: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        Generate AI Heat Plan ✨
+                      </button>
+                    )}
+                    {loadingPlan && <div style={{ color: '#aaa', fontSize: '13px' }}>Generating plan with Azure OpenAI...</div>}
+
+                    {aiPlan && (
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          fontSize: '13px',
+                          color: '#ddd',
+                          marginBottom: '8px',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {aiPlan.plan}
+                        </div>
+                        <button
+                          onClick={playPlan}
+                          disabled={playingAudio}
+                          style={{
+                            width: '100%',
+                            background: playingAudio ? '#555' : '#0078D4',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          {playingAudio ? 'Playing...' : '📢 Listen to Plan'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* AI Plan Modal/Overlay */}
+              {mode === 'circle' && tooltip && (
+                <div style={{
+                  position: 'absolute',
+                  top: '20px',
+                  left: '20px',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  {/* "Generate Plan" Button inside the main tooltip or separate? 
+                         Let's put it in the tooltip for better UX */}
                 </div>
               )}
             </DeckGL>
