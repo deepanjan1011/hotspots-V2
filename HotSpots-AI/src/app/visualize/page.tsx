@@ -7,7 +7,7 @@ import { ScatterplotLayer } from '@deck.gl/layers';
 import StaticMap, { NavigationControl } from 'react-map-gl';
 import Link from 'next/link';
 import Image from 'next/image';
-import { InteractiveHoverButton } from '@/components/magicui/interactive-hover-button';
+import { InteractiveHoverButton, InteractiveHoverBackButton } from '@/components/magicui/interactive-hover-button';
 import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
 
 const INITIAL_VIEW_STATE = {
@@ -396,9 +396,19 @@ export default function Visualize() {
     }}>
       <div className="visualize-back-btn">
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <InteractiveHoverButton style={{ margin: '24px 0 0 24px', padding: '12px 24px', fontWeight: 600, fontSize: '16px', borderRadius: '12px' }}>
+          <InteractiveHoverBackButton style={{
+            margin: '24px 0 0 24px',
+            padding: '12px 24px',
+            fontWeight: 600,
+            fontSize: '16px',
+            borderRadius: '12px',
+            width: '140px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
             Back
-          </InteractiveHoverButton>
+          </InteractiveHoverBackButton>
         </Link>
       </div>
 
@@ -1186,13 +1196,14 @@ export default function Visualize() {
                                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                                 background: msg.role === 'user' ? '#0ea5e9' : 'rgba(255,255,255,0.1)',
                                 color: '#fff',
-                                padding: '8px 12px',
+                                padding: '10px 14px',
                                 borderRadius: '12px',
                                 borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
                                 borderBottomLeftRadius: msg.role === 'assistant' ? '2px' : '12px',
-                                fontSize: '12px',
+                                fontSize: '14px',
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                                 maxWidth: '85%',
-                                lineHeight: '1.4'
+                                lineHeight: '1.6'
                               }}>
                                 {msg.content}
                               </div>
