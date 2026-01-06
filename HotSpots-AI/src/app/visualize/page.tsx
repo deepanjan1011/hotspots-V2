@@ -402,7 +402,7 @@ export default function Visualize() {
             fontWeight: 600,
             fontSize: '16px',
             borderRadius: '12px',
-            width: '140px',
+            minWidth: '120px',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center'
