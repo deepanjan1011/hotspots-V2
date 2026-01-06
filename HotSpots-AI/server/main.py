@@ -21,9 +21,9 @@ app.add_middleware(
 )
 
 from fastapi.responses import Response
-from .azure_services import generate_heat_plan, text_to_speech, chat_with_expert
+from azure_services import generate_heat_plan, text_to_speech, chat_with_expert
 
-from .config import CITY_NAME, BBOX, LOCATIONS
+from config import CITY_NAME, BBOX, LOCATIONS
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
