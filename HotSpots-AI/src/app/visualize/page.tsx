@@ -66,6 +66,9 @@ export default function Visualize() {
   const [aiPlan, setAiPlan] = useState<AIPlan | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [playingAudio, setPlayingAudio] = useState(false);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [loadingChat, setLoadingChat] = useState(false);
 
   useEffect(() => {
     setLastUpdated(new Date());
@@ -204,6 +207,7 @@ export default function Visualize() {
     if (!info) return;
     setLoadingPlan(true);
     setAiPlan(null);
+    setChatHistory([]);
     try {
       const res = await fetch('/api/generate-plan', {
         method: 'POST',
@@ -221,6 +225,40 @@ export default function Visualize() {
       alert("Failed to generate plan");
     } finally {
       setLoadingPlan(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    const newMessage = { role: 'user', content: chatInput };
+    const updatedHistory = [...chatHistory, newMessage];
+    setChatHistory(updatedHistory);
+    setChatInput('');
+    setLoadingChat(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: newMessage.content,
+          history: chatHistory,
+          context: tooltip ? {
+            city: 'Selected Location',
+            vulnerability: tooltip.vulnerability,
+            bldDensity: tooltip.bldDensity,
+            ndvi: tooltip.ndvi
+          } : null
+        })
+      });
+      const data = await res.json();
+      setChatHistory([...updatedHistory, { role: 'assistant', content: data.reply }]);
+    } catch (e) {
+      console.error(e);
+      setChatHistory([...updatedHistory, { role: 'assistant', content: "Error connecting to expert." }]);
+    } finally {
+      setLoadingChat(false);
     }
   };
 
@@ -745,6 +783,71 @@ export default function Visualize() {
                               <>🔊 Listen to Plan</>
                             )}
                           </InteractiveHoverButton>
+                        </div>
+
+                        {/* Chat Interface */}
+                        <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#F86D10', marginBottom: '8px' }}>
+                            💬 Ask the City Expert
+                          </div>
+
+                          <div style={{
+                            maxHeight: '150px',
+                            overflowY: 'auto',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}>
+                            {chatHistory.map((msg, idx) => (
+                              <div key={idx} style={{
+                                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                background: msg.role === 'user' ? '#0ea5e9' : 'rgba(255,255,255,0.1)',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                maxWidth: '90%'
+                              }}>
+                                {msg.content}
+                              </div>
+                            ))}
+                            {loadingChat && <div style={{ fontSize: '11px', color: '#aaa' }}>Expert is typing...</div>}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type="text"
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                              placeholder="Ask about costs, materials..."
+                              style={{
+                                flex: 1,
+                                background: 'rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '6px',
+                                padding: '6px',
+                                color: 'white',
+                                fontSize: '12px',
+                                outline: 'none'
+                              }}
+                            />
+                            <button
+                              onClick={handleSendMessage}
+                              disabled={loadingChat}
+                              style={{
+                                background: '#F86D10',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Send
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

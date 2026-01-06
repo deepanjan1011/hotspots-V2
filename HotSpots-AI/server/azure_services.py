@@ -94,3 +94,47 @@ def text_to_speech(text: str):
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             print(f"Error details: {cancellation_details.error_details}")
         raise HTTPException(status_code=500, detail="Speech synthesis failed.")
+
+def chat_with_expert(message: str, history: list, context_data: dict = None):
+    """
+    Chat with the Heat Resilience Expert using context from the generated plan.
+    """
+    if not OPENAI_API_KEY or not OPENAI_ENDPOINT:
+        # Mock response
+        return "I am a simulated expert. Azure OpenAI keys are missing, so I cannot answer specific questions yet. (Mock Mode)"
+
+    client = openai.AzureOpenAI(
+        api_key=OPENAI_API_KEY,
+        api_version="2024-02-15-preview",
+        azure_endpoint=OPENAI_ENDPOINT
+    )
+
+    # Build system context
+    system_prompt = f"""You are an urban planning expert specializing in Heat Resilience for {context_data.get('city', 'the city') if context_data else 'cities'}.
+    User is asking about a location with:
+    - Vulnerability: {context_data.get('vulnerability', 'N/A') if context_data else 'Unknown'}
+    - Building Density: {context_data.get('bldDensity', 'N/A') if context_data else 'Unknown'}
+    - NDVI: {context_data.get('ndvi', 'N/A') if context_data else 'Unknown'}
+    
+    Answer their questions concisely and professionally. Keep answers under 3 sentences if possible.
+    """
+
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Add history (limit to last 6 messages to save tokens)
+    for msg in history[-6:]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    
+    # Add current user message
+    messages.append({"role": "user", "content": message})
+
+    try:
+        response = client.chat.completions.create(
+            model=OPENAI_DEPLOYMENT_NAME,
+            messages=messages,
+            max_tokens=200
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

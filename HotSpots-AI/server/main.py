@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 from fastapi.responses import Response
-from .azure_services import generate_heat_plan, text_to_speech
+from .azure_services import generate_heat_plan, text_to_speech, chat_with_expert
 
 from .config import CITY_NAME, BBOX, LOCATIONS
 
@@ -77,6 +77,18 @@ class SpeakRequest(BaseModel):
 async def api_speak_plan(request: SpeakRequest):
     audio_data = text_to_speech(request.text)
     return Response(content=audio_data, media_type="audio/wav")
+
+from typing import List, Dict, Any, Optional
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[Dict[str, str]] = [] # [{"role": "user", "content": "..."}]
+    context: Optional[Dict[str, Any]] = None
+
+@app.post("/api/chat")
+async def api_chat_expert(request: ChatRequest):
+    response = chat_with_expert(request.message, request.history, request.context)
+    return {"reply": response}
 
 
 if __name__ == "__main__":
