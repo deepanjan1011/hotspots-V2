@@ -59,9 +59,9 @@ async def get_vulnerability_points():
         data = json.load(f)
     
     # Inject mock data for "Option 3" (AQI, Population, Health Risk)
-    # Since we don't have real granular data for these, we mock them for visualization.
+    # NOTE: "Vulnerability" is NOT modified here. It remains pure from the GeoJSON.
     import random
-    random.seed(42) # Ensure consistency across reloads
+    random.seed(42) # Ensure consistency
 
     for feature in data['features']:
         props = feature['properties']
@@ -70,15 +70,21 @@ async def get_vulnerability_points():
         
         # Mock AQI: Higher in dense areas, lower in green areas
         # Delhi baseline ~200. +150 for dense urban. -100 for forests.
+        # FIX: Added significant noise (randomness) to break up artificial "blocks" of color.
         base_aqi = 200 + (bld * 150) - (ndvi * 100)
-        noise = random.randint(-20, 20)
-        props['aqi'] = max(50, min(500, int(base_aqi + noise)))
         
-        # Mock Population: Directly correlated with building density
-        # High density = High population.
-        base_pop = bld * 80000 # Max density -> ~80k people/km2
-        pop_noise = random.randint(0, 5000)
-        props['pop'] = int(max(1000, base_pop + pop_noise))
+        # Add "Organic" variance: some random spots are cleaner/dirtier
+        organic_factor = random.choice([-40, 0, 0, 40]) # 25% chance of deviation
+        noise = random.randint(-40, 40) 
+        
+        final_aqi = base_aqi + noise + organic_factor
+        props['aqi'] = max(50, min(500, int(final_aqi)))
+        
+        # Mock Population: Directly correlated with bld, but with variation
+        base_pop = bld * 80000 
+        # Add "Residential vs Commercial" variance (Commercial has high BLD but lower night pop)
+        pop_variance = random.uniform(0.6, 1.4) # +/- 40% variance per building
+        props['pop'] = int(max(1000, (base_pop * pop_variance)))
 
     return data
 

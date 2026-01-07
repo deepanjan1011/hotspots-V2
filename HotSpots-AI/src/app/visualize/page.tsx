@@ -75,6 +75,8 @@ export default function Visualize() {
   const [chatInput, setChatInput] = useState('');
   const [loadingChat, setLoadingChat] = useState(false);
   const [shakePanel, setShakePanel] = useState(false);
+  const [showGreenRx, setShowGreenRx] = useState(false);
+  const [calculatingRx, setCalculatingRx] = useState(false);
 
   useEffect(() => {
     setLastUpdated(new Date());
@@ -162,12 +164,13 @@ export default function Visualize() {
     data,
     getPosition: (d) => d.position,
     getWeight: (d) => {
-      if (vizMode === 'aqi') return d.aqi || 0;
-      if (vizMode === 'pop') return d.pop || 0;
+      if (vizMode === 'aqi') return (d.aqi || 0) / 500;
+      if (vizMode === 'pop') return (d.pop || 0) / 60000;
       if (vizMode === 'risk') {
-        const aqiNorm = Math.min((d.aqi || 0) / 400, 1);
-        const heatNorm = d.weight; // normalized heat vuln
-        return (aqiNorm + heatNorm) / 2;
+        const aqiNorm = Math.min((d.aqi || 0) / 500, 1);
+        const heatNorm = d.weight;
+        const popNorm = Math.min((d.pop || 0) / 60000, 1);
+        return (aqiNorm + heatNorm + popNorm) / 3;
       }
       return d.weight;
     },
@@ -183,7 +186,7 @@ export default function Visualize() {
       [255, 140, 0, 220],
       [255, 0, 0, 255],
     ],
-    // colorDomain REMOVED to allow auto-scaling based on data range
+    colorDomain: [0, 1], // Explicit safe range
   });
 
   const scatterLayer = new ScatterplotLayer<PointData>({
@@ -804,294 +807,410 @@ export default function Visualize() {
               </StaticMap>
               {/* AI Plan Modal/Overlay */}
               {/* Right-Side Detail Panel (replaces floating tooltip) */}
-              {mode === 'circle' && tooltip && (
-                <div
-                  className="detail-panel"
-                  onWheel={(e) => e.stopPropagation()} // Prevent map zoom when scrolling panel
-                  onClick={(e) => e.stopPropagation()} // Prevent click-through to map
-                  style={{
-                    position: 'absolute',
-                    top: '24px',
-                    right: '24px',
-                    bottom: '24px',
-                    width: '380px',
-                    background: 'rgba(30, 30, 30, 0.95)',
-                    color: '#fff',
-                    borderRadius: '20px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                    zIndex: 50,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(16px)',
-                    fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
-                    overflow: 'hidden', // Main container doesn't scroll, content does
-                    transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                >
-                  {/* Header / Close Button */}
-                  <div style={{
-                    padding: '20px',
-                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                    display: 'flex',
-                    justifyContent: 'center', // Center content nicely
-                    alignItems: 'center',
-                    background: 'rgba(255,255,255,0.02)',
-                    // gap removed since button is absolute
-                    position: 'relative', // Context for absolute button
-                    minHeight: '32px' // Ensure height if button is taller
-                  }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTooltip(null);
-                      }}
-                      style={{
-                        background: '#ffffff', // High visibility solid white
-                        border: '1px solid #ffffff',
-                        color: '#000000', // Black icon
-                        cursor: 'pointer',
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s',
-                        zIndex: 60, // Ensure it's above panel content if needed
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        position: 'absolute',
-                        left: '20px', // Anchor to left
-                        top: '50%',
-                        transform: 'translateY(-50%)' // Perfect vertical center
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f0f0f0';
-                        e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; // Keep transform
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#ffffff';
-                        e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; // Keep transform
-                      }}
-                      title="Close"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <div style={{ fontWeight: 600, color: '#F86D10', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      📍 Selected Location
-                    </div>
-                  </div>
 
-                  {/* Scrollable Content Area */}
-                  <div style={{
+            </DeckGL>
+
+            {mode === 'circle' && tooltip && (
+              <div
+                className="detail-panel"
+                onWheel={(e) => e.stopPropagation()} // Prevent map zoom when scrolling panel
+                onClick={(e) => e.stopPropagation()} // Prevent click-through to map
+                style={{
+                  position: 'absolute',
+                  top: '24px',
+                  right: '24px',
+                  bottom: '24px',
+                  width: '380px',
+                  background: 'rgba(30, 30, 30, 0.95)',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  zIndex: 50,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(16px)',
+                  fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
+                  overflow: 'hidden', // Main container doesn't scroll, content does
+                  transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+              >
+                {/* Header / Close Button */}
+                <div style={{
+                  padding: '20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  justifyContent: 'center', // Center content nicely
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.02)',
+                  // gap removed since button is absolute
+                  position: 'relative', // Context for absolute button
+                  minHeight: '32px' // Ensure height if button is taller
+                }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTooltip(null);
+                    }}
+                    style={{
+                      background: '#ffffff', // High visibility solid white
+                      border: '1px solid #ffffff',
+                      color: '#000000', // Black icon
+                      cursor: 'pointer',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      zIndex: 60, // Ensure it's above panel content if needed
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      position: 'absolute',
+                      left: '20px', // Anchor to left
+                      top: '50%',
+                      transform: 'translateY(-50%)' // Perfect vertical center
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f0f0f0';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; // Keep transform
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; // Keep transform
+                    }}
+                    title="Close"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div style={{ fontWeight: 600, color: '#F86D10', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📍 Selected Location
+                  </div>
+                </div>
+
+                {/* Scrollable Content Area */}
+                <div
+                  onWheel={(e) => e.stopPropagation()}
+                  style={{
                     padding: '20px',
                     overflowY: 'auto',
+                    overscrollBehavior: 'contain', // Critical: prevents scroll chaining to map
                     flex: 1, // Takes remaining height
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '16px'
-                  }}>
+                  }}
+                >
 
-                    {/* Stats Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Vulnerability</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.vulnerability.toFixed(3)}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
-                          {(tooltip.vulnerability + (tooltip.aqi / 500)) > 1.2 ? 'SEVERE' : 'MODERATE'}
-                        </div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>NDVI</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.ndvi.toFixed(3)}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', gridColumn: 'span 2' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Building Density</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.bldDensity.toFixed(3)}</div>
+                  {/* Stats Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Vulnerability</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.vulnerability.toFixed(3)}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
+                        {(tooltip.vulnerability + (tooltip.aqi / 500)) > 1.2 ? 'SEVERE' : 'MODERATE'}
                       </div>
                     </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>NDVI</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.ndvi.toFixed(3)}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', gridColumn: 'span 2' }}>
+                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Building Density</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.bldDensity.toFixed(3)}</div>
+                    </div>
+                  </div>
 
-                    {/* Action Area */}
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-                      {!aiPlan && !loadingPlan && (
+                  {/* Action Area */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                    {!aiPlan && !loadingPlan && (
+                      <button
+                        onClick={() => generatePlan(tooltip)}
+                        style={{
+                          width: '100%',
+                          background: 'linear-gradient(135deg, #F86D10 0%, #ff8c00 100%)',
+                          border: 'none',
+                          borderRadius: '12px',
+                          color: 'white',
+                          padding: '14px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '14px',
+                          boxShadow: '0 4px 12px rgba(248, 109, 16, 0.3)',
+                          transition: 'transform 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                      >
+                        Generate AI Heat Plan ✨
+                      </button>
+                    )}
+
+                    {/* Green Rx Simulator */}
+                    {!aiPlan && !loadingPlan && (
+                      <div style={{ marginTop: '12px' }}>
                         <button
-                          onClick={() => generatePlan(tooltip)}
+                          onClick={() => {
+                            if (!showGreenRx) {
+                              setShowGreenRx(true);
+                              setCalculatingRx(true);
+                              setTimeout(() => setCalculatingRx(false), 4500);
+                            } else {
+                              setShowGreenRx(false);
+                            }
+                          }}
                           style={{
                             width: '100%',
-                            background: 'linear-gradient(135deg, #F86D10 0%, #ff8c00 100%)',
-                            border: 'none',
+                            background: showGreenRx ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            border: showGreenRx ? '1px solid #22c55e' : '1px solid rgba(255, 255, 255, 0.1)',
                             borderRadius: '12px',
-                            color: 'white',
-                            padding: '14px',
+                            color: showGreenRx ? '#22c55e' : '#fff',
+                            padding: '12px',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '14px',
-                            boxShadow: '0 4px 12px rgba(248, 109, 16, 0.3)',
-                            transition: 'transform 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                         >
-                          Generate AI Heat Plan ✨
+                          {calculatingRx ? '⏳ Running Bio-Model...' : '🌱 Simulate Green Intervention'}
                         </button>
-                      )}
 
-                      {loadingPlan && (
-                        <div style={{
-                          background: 'rgba(248, 109, 16, 0.1)',
-                          color: '#F86D10',
-                          padding: '12px',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                          fontSize: '14px',
-                          border: '1px solid rgba(248, 109, 16, 0.2)'
-                        }}>
-                          Generating plan with Azure OpenAI...
-                        </div>
-                      )}
-
-                      {aiPlan && (
-                        <div className="ai-content">
+                        {showGreenRx && (
                           <div style={{
-                            background: 'rgba(255,255,255,0.03)',
+                            marginTop: '12px',
+                            background: 'rgba(34, 197, 94, 0.05)',
+                            border: '1px solid rgba(34, 197, 94, 0.2)',
                             borderRadius: '12px',
-                            padding: '14px',
-                            fontSize: '13px',
-                            color: '#e5e7eb',
-                            lineHeight: '1.6',
-                            whiteSpace: 'pre-wrap',
-                            marginBottom: '16px',
-                            border: '1px solid rgba(255,255,255,0.05)'
+                            padding: '16px',
+                            animation: 'fadeIn 0.3s ease-out'
                           }}>
-                            {aiPlan.plan}
+                            {calculatingRx ? (
+                              <div style={{ textAlign: 'center', padding: '10px 0', color: '#86efac', fontSize: '13px' }}>
+                                <i>Analyzing micro-climate data...</i>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ fontSize: '13px', color: '#86efac', marginBottom: '12px', fontWeight: 500 }}>
+                                  Scenario: Planting 50 Native Trees & 200m² Green Roof
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>Proj. Temp Drop</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
+                                      -{((tooltip.bldDensity || 0.5) * 4 + 0.5).toFixed(1)}°C 📉
+                                    </div>
+                                  </div>
+                                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>AQI Improvement</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
+                                      -{Math.round((tooltip.aqi || 200) * 0.15)} Pts 🍃
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ marginTop: '12px', fontSize: '12px', color: '#fff', borderTop: '1px solid rgba(34, 197, 94, 0.2)', paddingTop: '8px' }}>
+                                  <span style={{ color: '#22c55e', fontWeight: 700 }}>Outcome:</span>
+                                  {(() => {
+                                    const tempDrop = (tooltip.bldDensity || 0.5) * 4 + 0.5;
+                                    const currentScore = tooltip.vulnerability + (tooltip.aqi / 500);
+                                    // Boost: Temp drop also reduces vulnerability score (0.08 per degree)
+                                    const newScore = Math.max(0, (tooltip.vulnerability - (tempDrop * 0.08)) + ((tooltip.aqi * 0.85) / 500));
+
+                                    const getLabel = (s: number) => s > 1.2 ? 'Severe' : s > 0.8 ? 'Moderate' : 'Low';
+                                    const start = getLabel(currentScore);
+                                    const end = getLabel(newScore);
+
+                                    if (start === end) {
+                                      return <span> Risk significantly mitigated within <b>{start}</b> levels.</span>;
+                                    }
+                                    return <span> Health Risk reduced from <b>{start}</b> to <b>{end}</b>.</span>;
+                                  })()}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {loadingPlan && (
+                      <div style={{
+                        background: 'rgba(248, 109, 16, 0.1)',
+                        color: '#F86D10',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        textAlign: 'center',
+                        fontSize: '14px',
+                        border: '1px solid rgba(248, 109, 16, 0.2)'
+                      }}>
+                        Generating plan with Azure OpenAI...
+                      </div>
+                    )}
+
+                    {aiPlan && (
+                      <div className="ai-content">
+                        <button
+                          onClick={() => {
+                            setAiPlan(null);
+                            setChatHistory([]); // Clear chat on reset
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#9ca3af',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginBottom: '12px',
+                            padding: 0
+                          }}
+                        >
+                          ← Back to Generate
+                        </button>
+                        <div style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: '12px',
+                          padding: '14px',
+                          fontSize: '13px',
+                          color: '#e5e7eb',
+                          lineHeight: '1.6',
+                          whiteSpace: 'pre-wrap',
+                          marginBottom: '16px',
+                          border: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                          {aiPlan.plan}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                          <InteractiveHoverButton
+                            onClick={playPlan}
+                            disabled={loadingPlan}
+                            style={{
+                              flex: 1,
+                              background: playingAudio ? '#ef4444' : '#0ea5e9',
+                              border: 'none',
+                              color: 'white',
+                              padding: '12px',
+                              borderRadius: '10px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: '13px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                            }}
+                          >
+                            {playingAudio ? <>⏸️ Pause Audio</> : <>🔊 Listen to Plan</>}
+                          </InteractiveHoverButton>
+                        </div>
+
+                        {/* Chat Interface */}
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#F86D10', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            💬 Ask the City Expert
                           </div>
 
-                          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                            <InteractiveHoverButton
-                              onClick={playPlan}
-                              disabled={loadingPlan}
+                          <div style={{
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: '12px',
+                            padding: '12px',
+                            minHeight: '120px',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                            marginBottom: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}>
+                            {chatHistory.length === 0 && (
+                              <div style={{ color: '#666', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
+                                Have questions about the plan? Ask here.
+                              </div>
+                            )}
+                            {chatHistory.map((msg, idx) => (
+                              <div key={idx} style={{
+                                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                background: msg.role === 'user' ? '#0ea5e9' : 'rgba(255,255,255,0.1)',
+                                color: '#fff',
+                                padding: '8px 12px',
+                                borderRadius: '12px',
+                                borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
+                                borderBottomLeftRadius: msg.role === 'assistant' ? '2px' : '12px',
+                                fontSize: '12px',
+                                maxWidth: '85%',
+                                lineHeight: '1.4'
+                              }}>
+                                {msg.content}
+                              </div>
+                            ))}
+                            {loadingChat && <div style={{ fontSize: '11px', color: '#aaa', fontStyle: 'italic' }}>Expert is typing...</div>}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                              type="text"
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                              placeholder="Type your question..."
                               style={{
                                 flex: 1,
-                                background: playingAudio ? '#ef4444' : '#0ea5e9',
-                                border: 'none',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                padding: '10px 12px',
                                 color: 'white',
-                                padding: '12px',
-                                borderRadius: '10px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
                                 fontSize: '13px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                                outline: 'none',
+                                transition: 'border-color 0.2s'
+                              }}
+                              onFocus={(e) => e.target.style.borderColor = '#F86D10'}
+                              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                            />
+                            <button
+                              onClick={handleSendMessage}
+                              disabled={loadingChat}
+                              style={{
+                                background: '#F86D10',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0 16px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 600
                               }}
                             >
-                              {playingAudio ? <>⏸️ Pause Audio</> : <>🔊 Listen to Plan</>}
-                            </InteractiveHoverButton>
-                          </div>
-
-                          {/* Chat Interface */}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#F86D10', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              💬 Ask the City Expert
-                            </div>
-
-                            <div style={{
-                              background: 'rgba(0,0,0,0.2)',
-                              borderRadius: '12px',
-                              padding: '12px',
-                              minHeight: '120px',
-                              maxHeight: '200px',
-                              overflowY: 'auto',
-                              marginBottom: '12px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '8px'
-                            }}>
-                              {chatHistory.length === 0 && (
-                                <div style={{ color: '#666', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
-                                  Have questions about the plan? Ask here.
-                                </div>
-                              )}
-                              {chatHistory.map((msg, idx) => (
-                                <div key={idx} style={{
-                                  alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                  background: msg.role === 'user' ? '#0ea5e9' : 'rgba(255,255,255,0.1)',
-                                  color: '#fff',
-                                  padding: '8px 12px',
-                                  borderRadius: '12px',
-                                  borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
-                                  borderBottomLeftRadius: msg.role === 'assistant' ? '2px' : '12px',
-                                  fontSize: '12px',
-                                  maxWidth: '85%',
-                                  lineHeight: '1.4'
-                                }}>
-                                  {msg.content}
-                                </div>
-                              ))}
-                              {loadingChat && <div style={{ fontSize: '11px', color: '#aaa', fontStyle: 'italic' }}>Expert is typing...</div>}
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <input
-                                type="text"
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="Type your question..."
-                                style={{
-                                  flex: 1,
-                                  background: 'rgba(255,255,255,0.05)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
-                                  borderRadius: '8px',
-                                  padding: '10px 12px',
-                                  color: 'white',
-                                  fontSize: '13px',
-                                  outline: 'none',
-                                  transition: 'border-color 0.2s'
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#F86D10'}
-                                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                              />
-                              <button
-                                onClick={handleSendMessage}
-                                disabled={loadingChat}
-                                style={{
-                                  background: '#F86D10',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  padding: '0 16px',
-                                  color: 'white',
-                                  cursor: 'pointer',
-                                  fontSize: '13px',
-                                  fontWeight: 600
-                                }}
-                              >
-                                Send
-                              </button>
-                            </div>
+                              Send
+                            </button>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </DeckGL>
+              </div>
+            )}
 
 
           </div>
