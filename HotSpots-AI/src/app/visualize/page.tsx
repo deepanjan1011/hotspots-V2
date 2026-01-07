@@ -439,6 +439,15 @@ export default function Visualize() {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      <style>{`
+        .sidebar-scroll-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .sidebar-scroll-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       <div className="visualize-back-btn">
         <Link href="/" style={{ textDecoration: 'none' }}>
           <InteractiveHoverBackButton style={{
