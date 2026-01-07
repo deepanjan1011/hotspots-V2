@@ -174,20 +174,22 @@ export default function Visualize() {
       }
       return d.weight;
     },
-    radiusPixels: 60, // Adjusted radius for better detail
+    radiusPixels: 50, // Increase radius for smoother blend
     intensity: 1,
     threshold: 0.05,
+    // Use the explicit Heat colors (Green->Yellow->Red)
     colorRange: [
-      [0, 255, 255, 0],
-      [0, 255, 255, 50],
-      [0, 200, 255, 100],
-      [100, 255, 0, 150],
-      [255, 255, 0, 200],
-      [255, 140, 0, 220],
-      [255, 0, 0, 255],
+      [0, 255, 0, 25],     // Green (Faint)
+      [255, 255, 0, 85],   // Yellow
+      [255, 140, 0, 155],  // Orange
+      [255, 0, 0, 255]     // Red
     ],
-    colorDomain: [0, 1], // Explicit safe range
+    updateTriggers: {
+      getWeight: [vizMode]
+    },
+    // Removed colorDomain to allow auto-scaling based on viewport max density
   });
+
 
   const scatterLayer = new ScatterplotLayer<PointData>({
     id: 'heat-shield-circles',
@@ -921,7 +923,12 @@ export default function Visualize() {
                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
                       <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
                       <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
-                        {(tooltip.vulnerability + (tooltip.aqi / 500)) > 1.2 ? 'SEVERE' : 'MODERATE'}
+                        {(() => {
+                          const score = tooltip.vulnerability + (tooltip.aqi / 500);
+                          if (score > 1.2) return 'SEVERE';
+                          if (score > 0.8) return 'MODERATE';
+                          return 'LOW';
+                        })()}
                       </div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
