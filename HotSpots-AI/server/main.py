@@ -54,9 +54,29 @@ async def get_vulnerability_points():
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Vulnerability data not found. Please run data generation.")
     
+
     with open(file_path, "r") as f:
         data = json.load(f)
+    
+    # Inject mock data for "Option 3" (AQI, Population, Health Risk)
+    # Since we don't have real granular data for these, we mock them for visualization.
+    import random
+    random.seed(42) # Ensure consistency across reloads
+
+    for feature in data['features']:
+        # Mock AQI (Delhi is usually 100-500)
+        # We correlate it slightly with vulnerability for realism (hotter areas ~ worse air stagnation)
+        base_aqi = 200
+        vuln_factor = feature['properties'].get('vulnerability', 0.5) * 200
+        noise = random.randint(-50, 50)
+        feature['properties']['aqi'] = int(base_aqi + vuln_factor + noise)
+        
+        # Mock Population Density (people per sq km equivalent for this grid)
+        # Random distribution 
+        feature['properties']['pop'] = random.randint(5000, 60000)
+
     return data
+
 
 
 

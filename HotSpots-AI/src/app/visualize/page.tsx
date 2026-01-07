@@ -26,6 +26,8 @@ type PointData = {
   ndvi?: number;
   bldDensity?: number;
   vulnerability?: number;
+  aqi?: number;
+  pop?: number;
 };
 
 type TooltipInfo = {
@@ -34,6 +36,8 @@ type TooltipInfo = {
   ndvi: number;
   bldDensity: number;
   vulnerability: number;
+  aqi: number;
+  pop: number;
 } | null;
 
 type AIPlan = {
@@ -55,6 +59,7 @@ function formatTime(date: Date | null) {
 export default function Visualize() {
   const [data, setData] = useState<PointData[]>([]);
   const [mode, setMode] = useState<'gradient' | 'circle'>('circle');
+  const [vizMode, setVizMode] = useState<'heat' | 'aqi' | 'risk' | 'pop'>('heat');
   const [tooltip, setTooltip] = useState<TooltipInfo>(null);
   const [quantiles, setQuantiles] = useState<{ q1: number, q2: number }>({ q1: 0.33, q2: 0.66 });
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,6 +143,8 @@ export default function Visualize() {
           ndvi: f.properties.ndvi,
           bldDensity: f.properties.bldDensity,
           vulnerability: f.properties.vulnerability,
+          aqi: f.properties.aqi,
+          pop: f.properties.pop,
         }));
         setData(pts);
         if (pts.length > 0) {
@@ -176,6 +183,32 @@ export default function Visualize() {
     getPosition: (d) => d.position,
     getRadius: (d) => 80 + 200 * d.weight,
     getFillColor: (d) => {
+      if (vizMode === 'aqi') {
+        const val = d.aqi || 0;
+        // AQI Scale: Green(0-50) -> Yellow(51-100) -> Orange(101-200) -> Red(201-300) -> Maroon(300+)
+        if (val <= 50) return [0, 228, 0, 200];
+        if (val <= 100) return [255, 255, 0, 200];
+        if (val <= 200) return [255, 126, 0, 200];
+        if (val <= 300) return [255, 0, 0, 200];
+        return [126, 0, 35, 220];
+      }
+      if (vizMode === 'pop') {
+        const val = d.pop || 0;
+        // Pop Scale: Light Blue -> Dark Purple
+        const norm = Math.min(val / 30000, 1);
+        return [100 + 100 * norm, 100 - 100 * norm, 255, 180 + 75 * norm];
+      }
+      if (vizMode === 'risk') {
+        // Risk = Heat + AQI combined
+        const aqiNorm = Math.min((d.aqi || 0) / 400, 1);
+        const heatNorm = (d.vulnerability || 0);
+        const risk = (aqiNorm + heatNorm) / 2;
+        if (risk > 0.6) return [255, 0, 0, 255]; // Extreme
+        if (risk > 0.4) return [255, 140, 0, 220]; // High
+        return [255, 255, 0, 180]; // Moderate
+      }
+
+      // Default: Heat Vulnerability
       const v = d.weight;
       if (v < quantiles.q1) return [255, 255, 0, 180];
       if (v < quantiles.q2) return [255, 165, 0, 200];
@@ -202,13 +235,15 @@ export default function Visualize() {
           ndvi: info.object.ndvi ?? 0,
           bldDensity: info.object.bldDensity ?? 0,
           vulnerability: info.object.vulnerability ?? info.object.weight ?? 0,
+          aqi: info.object.aqi ?? 0,
+          pop: info.object.pop ?? 0,
         });
       } else {
         setTooltip(null);
       }
     },
     updateTriggers: {
-      getFillColor: [quantiles]
+      getFillColor: [quantiles, vizMode]
     }
   });
 
@@ -384,7 +419,8 @@ export default function Visualize() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      overflow: 'hidden',
       width: '100vw',
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
       fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
@@ -444,7 +480,9 @@ export default function Visualize() {
             background: 'rgba(42, 42, 42, 0.95)',
             borderRight: '1px solid #374151',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: 'hidden', // Ensure it doesn't expand
+            minHeight: 0 // Allow shrinking to fit parent
           }}>
             <div className="sidebar-scroll-hide" style={{
               padding: '18px 10px',
@@ -576,81 +614,109 @@ export default function Visualize() {
                 </div>
               </div>
 
+              <div style={{
+                background: 'rgba(42, 42, 42, 0.95)',
+                borderRadius: '16px',
+                padding: '14px',
+                boxShadow: '0 6px 24px rgba(0,0,0,0.18)',
+                border: '1px solid #374151',
+                marginTop: '-12px'
+              }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600, color: '#F86D10' }}>
+                  Visualization Layer
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {[
+                    { id: 'heat', label: 'Heat Vuln.' },
+                    { id: 'aqi', label: 'Air Quality' },
+                    { id: 'pop', label: 'Population' },
+                    { id: 'risk', label: 'Health Risk' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        setVizMode(opt.id as any);
+                        setMode('circle'); // Force circle mode for these custom views
+                      }}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        border: vizMode === opt.id ? '2px solid #F86D10' : '2px solid transparent',
+                        background: vizMode === opt.id ? 'rgba(248,109,16,0.2)' : 'rgba(255,255,255,0.05)',
+                        color: vizMode === opt.id ? '#F86D10' : '#888',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+
+              {/* Contextual Legend */}
               <div className="sidebar-fade-border" style={{
                 background: 'rgba(42, 42, 42, 0.95)',
                 borderRadius: '16px',
                 padding: '24px',
+                // marginTop: '24px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
                 border: '1px solid #d1d5db',
                 transition: 'border-color 0.25s',
                 cursor: 'pointer'
               }}>
-                <h3 style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: '#F86D10',
-                  letterSpacing: '-0.01em'
-                }}>
-                  {mode === 'gradient' ? 'Heatmap Legend' : 'Vulnerability Levels'}
-                </h3>
-
-                {mode === 'gradient' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Low to High Vulnerability</span>
+                {vizMode === 'heat' && (
+                  <>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600, color: '#F86D10' }}>Vulnerability Levels</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255, 255, 0, 0.8)', border: '2px solid rgba(255, 255, 0, 0.3)' }} />
+                        <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Low Risk</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255, 165, 0, 0.8)', border: '2px solid rgba(255, 165, 0, 0.3)' }} />
+                        <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Medium Risk</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255, 100, 0, 0.8)', border: '2px solid rgba(255, 100, 0, 0.3)' }} />
+                        <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>High Risk</span>
+                      </div>
                     </div>
-                    <div style={{
-                      height: '12px',
-                      background: 'linear-gradient(90deg, #00ffff, #64ff00, #ffff00, #ff8c00, #ff0000)',
-                      borderRadius: '6px',
-                      marginTop: '8px'
-                    }} />
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: '12px',
-                      color: '#888',
-                      marginTop: '8px',
-                      fontWeight: 500
-                    }}>
-                      <span>Low</span>
-                      <span>High</span>
+                  </>
+                )}
+                {vizMode === 'aqi' && (
+                  <>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600, color: '#F86D10' }}>AQI Levels</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(0, 228, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Good (0-50)</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 255, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Moderate (51-100)</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 126, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Unhealthy (101-200)</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 0, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Very Unhealthy</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(126, 0, 35)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Hazardous (300+)</span></div>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 0, 0.8)',
-                        border: '2px solid rgba(255, 255, 0, 0.3)'
-                      }} />
-                      <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Low Risk</span>
+                  </>
+                )}
+                {vizMode === 'risk' && (
+                  <>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600, color: '#F86D10' }}>Health Risk (Heat + AQI)</h3>
+                    <div style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>Combined index of heat vulnerability and poor air quality.</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 0, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Severe Risk</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 140, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Elevated Risk</span></div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: 'rgba(255, 165, 0, 0.8)',
-                        border: '2px solid rgba(255, 165, 0, 0.3)'
-                      }} />
-                      <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Medium Risk</span>
+                  </>
+                )}
+                {vizMode === 'pop' && (
+                  <>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600, color: '#F86D10' }}>Population Density</h3>
+                    <div style={{ height: '12px', background: 'linear-gradient(90deg, #ADD8E6, #00008B)', borderRadius: '6px' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888', marginTop: 4 }}>
+                      <span>Low</span><span>High</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: 'rgba(255, 100, 0, 0.8)',
-                        border: '2px solid rgba(255, 100, 0, 0.3)'
-                      }} />
-                      <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>High Risk</span>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -668,8 +734,8 @@ export default function Visualize() {
               onClick={toggleFullscreen}
               style={{
                 position: 'absolute',
-                top: '20px',
-                right: '20px',
+                top: '36px',
+                right: '34px',
                 zIndex: 1000,
                 background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
@@ -727,9 +793,9 @@ export default function Visualize() {
                   onClick={(e) => e.stopPropagation()} // Prevent click-through to map
                   style={{
                     position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    bottom: '20px',
+                    top: '24px',
+                    right: '24px',
+                    bottom: '24px',
                     width: '380px',
                     background: 'rgba(30, 30, 30, 0.95)',
                     color: '#fff',
@@ -750,36 +816,54 @@ export default function Visualize() {
                     padding: '20px',
                     borderBottom: '1px solid rgba(255,255,255,0.1)',
                     display: 'flex',
-                    justifyContent: 'space-between',
+                    justifyContent: 'center', // Center content nicely
                     alignItems: 'center',
-                    background: 'rgba(255,255,255,0.02)'
+                    background: 'rgba(255,255,255,0.02)',
+                    // gap removed since button is absolute
+                    position: 'relative', // Context for absolute button
+                    minHeight: '32px' // Ensure height if button is taller
                   }}>
-                    <div style={{ fontWeight: 600, color: '#F86D10', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      📍 Selected Location
-                    </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setTooltip(null);
                       }}
                       style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#9ca3af',
+                        background: '#ffffff', // High visibility solid white
+                        border: '1px solid #ffffff',
+                        color: '#000000', // Black icon
                         cursor: 'pointer',
-                        padding: '4px',
+                        width: '32px',
+                        height: '32px',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '20px',
-                        lineHeight: 1
+                        transition: 'all 0.2s',
+                        zIndex: 60, // Ensure it's above panel content if needed
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        position: 'absolute',
+                        left: '20px', // Anchor to left
+                        top: '50%',
+                        transform: 'translateY(-50%)' // Perfect vertical center
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f0f0f0';
+                        e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; // Keep transform
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; // Keep transform
+                      }}
+                      title="Close"
                     >
-                      ×
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
                     </button>
+                    <div style={{ fontWeight: 600, color: '#F86D10', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      📍 Selected Location
+                    </div>
                   </div>
 
                   {/* Scrollable Content Area */}
@@ -797,6 +881,20 @@ export default function Visualize() {
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
                         <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Vulnerability</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.vulnerability.toFixed(3)}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
+                          {(tooltip.vulnerability + (tooltip.aqi / 500)) > 1.2 ? 'SEVERE' : 'MODERATE'}
+                        </div>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
                         <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>NDVI</div>
@@ -977,288 +1075,10 @@ export default function Visualize() {
               )}
             </DeckGL>
 
-            {/* Right-Side Detail Panel (Moved OUTSIDE DeckGL to stop event bubbling) */}
-            {mode === 'circle' && tooltip && (
-              <div
-                className="detail-panel"
-                onWheel={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  bottom: '20px',
-                  width: '380px',
-                  background: 'rgba(30, 30, 30, 0.95)',
-                  color: '#fff',
-                  borderRadius: '20px',
-                  boxShadow: shakePanel ? '0 8px 32px rgba(248, 109, 16, 0.6)' : '0 8px 32px rgba(0,0,0,0.4)', // Flash Orange shadow on shake
-                  zIndex: 50,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: shakePanel ? '1px solid #F86D10' : '1px solid rgba(255,255,255,0.1)', // Flash Orange border
-                  backdropFilter: 'blur(16px)',
-                  fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
-                  overflow: 'hidden',
-                  transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, border-color 0.2s',
-                  animation: shakePanel ? 'shake 0.4s ease-in-out' : 'none', // Apply shake
-                }}
-              >
-                {/* Header / Close Button */}
-                <div style={{
-                  padding: '20px',
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'rgba(255,255,255,0.02)'
-                }}>
-                  <div style={{ fontWeight: 600, color: '#F86D10', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    📍 Selected Location
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTooltip(null);
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#9ca3af',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px',
-                      lineHeight: 1
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                  >
-                    ×
-                  </button>
-                </div>
 
-                {/* Scrollable Content Area */}
-                <div style={{
-                  padding: '20px',
-                  overflowY: 'auto',
-                  flex: 1, // Takes remaining height
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px'
-                }}>
-
-                  {/* Stats Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Vulnerability</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.vulnerability.toFixed(3)}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>NDVI</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.ndvi.toFixed(3)}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', gridColumn: 'span 2' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Building Density</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.bldDensity.toFixed(3)}</div>
-                    </div>
-                  </div>
-
-                  {/* Action Area */}
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-                    {!aiPlan && !loadingPlan && (
-                      <button
-                        onClick={() => generatePlan(tooltip)}
-                        style={{
-                          width: '100%',
-                          background: 'linear-gradient(135deg, #F86D10 0%, #ff8c00 100%)',
-                          border: 'none',
-                          borderRadius: '12px',
-                          color: 'white',
-                          padding: '14px',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: '14px',
-                          boxShadow: '0 4px 12px rgba(248, 109, 16, 0.3)',
-                          transition: 'transform 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                      >
-                        Generate AI Heat Plan ✨
-                      </button>
-                    )}
-
-                    {loadingPlan && (
-                      <div style={{
-                        background: 'rgba(248, 109, 16, 0.1)',
-                        color: '#F86D10',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        textAlign: 'center',
-                        fontSize: '14px',
-                        border: '1px solid rgba(248, 109, 16, 0.2)'
-                      }}>
-                        Generating plan with Azure OpenAI...
-                      </div>
-                    )}
-
-                    {aiPlan && (
-                      <div className="ai-content">
-                        {/* Back Button */}
-                        <div
-                          onClick={() => setAiPlan(null)}
-                          style={{
-                            color: '#9ca3af',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            marginBottom: '10px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontWeight: 500
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                        >
-                          ← Back to Generate
-                        </div>
-
-                        <div style={{
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: '12px',
-                          padding: '16px',
-                          fontSize: '15px',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                          color: '#f3f4f6',
-                          lineHeight: '1.75',
-                          letterSpacing: '0.01em',
-                          whiteSpace: 'pre-wrap',
-                          marginBottom: '16px',
-                          border: '1px solid rgba(255,255,255,0.05)'
-                        }}>
-                          {aiPlan.plan}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                          <InteractiveHoverButton
-                            onClick={playPlan}
-                            disabled={loadingPlan}
-                            style={{
-                              flex: 1,
-                              background: playingAudio ? '#ef4444' : '#0ea5e9',
-                              border: 'none',
-                              color: 'white',
-                              padding: '12px',
-                              borderRadius: '10px',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                              fontSize: '13px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '8px',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                            }}
-                          >
-                            {playingAudio ? <>🛑 Stop Audio</> : <>🔊 Listen to Plan</>}
-                          </InteractiveHoverButton>
-                        </div>
-
-                        {/* Chat Interface */}
-                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#F86D10', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            💬 Ask the City Expert
-                          </div>
-
-                          <div style={{
-                            background: 'rgba(0,0,0,0.2)',
-                            borderRadius: '12px',
-                            padding: '12px',
-                            minHeight: '120px',
-                            maxHeight: '200px',
-                            overflowY: 'auto',
-                            marginBottom: '12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px'
-                          }}>
-                            {chatHistory.length === 0 && (
-                              <div style={{ color: '#666', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
-                                Have questions about the plan? Ask here.
-                              </div>
-                            )}
-                            {chatHistory.map((msg, idx) => (
-                              <div key={idx} style={{
-                                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                background: msg.role === 'user' ? '#0ea5e9' : 'rgba(255,255,255,0.1)',
-                                color: '#fff',
-                                padding: '10px 14px',
-                                borderRadius: '12px',
-                                borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
-                                borderBottomLeftRadius: msg.role === 'assistant' ? '2px' : '12px',
-                                fontSize: '14px',
-                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                                maxWidth: '85%',
-                                lineHeight: '1.6'
-                              }}>
-                                {msg.content}
-                              </div>
-                            ))}
-                            {loadingChat && <div style={{ fontSize: '11px', color: '#aaa', fontStyle: 'italic' }}>Expert is typing...</div>}
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                              type="text"
-                              value={chatInput}
-                              onChange={(e) => setChatInput(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                              placeholder="Type your question..."
-                              style={{
-                                flex: 1,
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '8px',
-                                padding: '10px 12px',
-                                color: 'white',
-                                fontSize: '13px',
-                                outline: 'none',
-                                transition: 'border-color 0.2s'
-                              }}
-                              onFocus={(e) => e.target.style.borderColor = '#F86D10'}
-                              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                            />
-                            <button
-                              onClick={handleSendMessage}
-                              disabled={loadingChat}
-                              style={{
-                                background: '#F86D10',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '0 16px',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                fontWeight: 600
-                              }}
-                            >
-                              Send
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
 
       <style jsx global>{`
         @font-face {
