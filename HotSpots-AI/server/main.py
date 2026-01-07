@@ -64,16 +64,21 @@ async def get_vulnerability_points():
     random.seed(42) # Ensure consistency across reloads
 
     for feature in data['features']:
-        # Mock AQI (Delhi is usually 100-500)
-        # We correlate it slightly with vulnerability for realism (hotter areas ~ worse air stagnation)
-        base_aqi = 200
-        vuln_factor = feature['properties'].get('vulnerability', 0.5) * 200
-        noise = random.randint(-50, 50)
-        feature['properties']['aqi'] = int(base_aqi + vuln_factor + noise)
+        props = feature['properties']
+        bld = props.get('bld_density', 0)
+        ndvi = props.get('ndvi', 0)
         
-        # Mock Population Density (people per sq km equivalent for this grid)
-        # Random distribution 
-        feature['properties']['pop'] = random.randint(5000, 60000)
+        # Mock AQI: Higher in dense areas, lower in green areas
+        # Delhi baseline ~200. +150 for dense urban. -100 for forests.
+        base_aqi = 200 + (bld * 150) - (ndvi * 100)
+        noise = random.randint(-20, 20)
+        props['aqi'] = max(50, min(500, int(base_aqi + noise)))
+        
+        # Mock Population: Directly correlated with building density
+        # High density = High population.
+        base_pop = bld * 80000 # Max density -> ~80k people/km2
+        pop_noise = random.randint(0, 5000)
+        props['pop'] = int(max(1000, base_pop + pop_noise))
 
     return data
 

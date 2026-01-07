@@ -158,13 +158,22 @@ export default function Visualize() {
   }, []);
 
   const heatmapLayer = new HeatmapLayer<PointData>({
-    id: 'heat-shield-heatmap',
+    id: `heat-shield-heatmap-${vizMode}`,
     data,
     getPosition: (d) => d.position,
-    getWeight: (d) => d.weight,
-    radiusPixels: 600,
+    getWeight: (d) => {
+      if (vizMode === 'aqi') return d.aqi || 0;
+      if (vizMode === 'pop') return d.pop || 0;
+      if (vizMode === 'risk') {
+        const aqiNorm = Math.min((d.aqi || 0) / 400, 1);
+        const heatNorm = d.weight; // normalized heat vuln
+        return (aqiNorm + heatNorm) / 2;
+      }
+      return d.weight;
+    },
+    radiusPixels: 60, // Adjusted radius for better detail
     intensity: 1,
-    threshold: 0.1,
+    threshold: 0.05,
     colorRange: [
       [0, 255, 255, 0],
       [0, 255, 255, 50],
@@ -174,7 +183,7 @@ export default function Visualize() {
       [255, 140, 0, 220],
       [255, 0, 0, 255],
     ],
-    colorDomain: [0, Math.max(...data.map((d) => d.weight), 1)],
+    // colorDomain REMOVED to allow auto-scaling based on data range
   });
 
   const scatterLayer = new ScatterplotLayer<PointData>({
@@ -636,7 +645,6 @@ export default function Visualize() {
                       key={opt.id}
                       onClick={() => {
                         setVizMode(opt.id as any);
-                        setMode('circle'); // Force circle mode for these custom views
                       }}
                       style={{
                         padding: '8px',
@@ -706,6 +714,7 @@ export default function Visualize() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 0, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Severe Risk</span></div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 140, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Elevated Risk</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><div style={{ width: 16, height: 16, background: 'rgb(255, 255, 0)', borderRadius: '4px' }} /> <span style={{ color: '#ccc', fontSize: 13 }}>Moderate Risk</span></div>
                     </div>
                   </>
                 )}
