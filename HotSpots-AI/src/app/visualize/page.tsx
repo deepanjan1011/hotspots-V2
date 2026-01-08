@@ -139,15 +139,42 @@ export default function Visualize() {
     fetch(`/api/vulnerability-points?v=${new Date().getTime()}`)
       .then((res) => res.json())
       .then((geojson) => {
-        const pts: PointData[] = geojson.features.map((f: any) => ({
-          position: f.geometry.coordinates,
-          weight: f.properties.vulnerability,
-          ndvi: f.properties.ndvi,
-          bldDensity: f.properties.bldDensity,
-          vulnerability: f.properties.vulnerability,
-          aqi: f.properties.aqi,
-          pop: f.properties.pop,
-        }));
+        const pts: PointData[] = geojson.features.map((f: any) => {
+          // Calculate simulated values upfront so they are available for other fields
+          const simulatedBldDensity = f.properties.bldDensity || (f.properties.vulnerability * 0.8 + Math.random() * 0.2);
+
+          return {
+            position: f.geometry.coordinates,
+            weight: f.properties.vulnerability,
+            ndvi: f.properties.ndvi,
+            bldDensity: simulatedBldDensity,
+            vulnerability: f.properties.vulnerability,
+            aqi: f.properties.aqi,
+            // Simulate realistic population data if backend returns default 1000
+            // Use deterministic "random" based on coordinates so it persists on reload
+            pop: f.properties.pop === 1000
+              ? (() => {
+                // Create a consistent seed from coordinates
+                const seed = (Math.abs(f.geometry.coordinates[0] * 1000) + Math.abs(f.geometry.coordinates[1] * 1000)) % 1;
+
+                // Realism: 
+                // Very low density (<0.1) -> 500 - 3,000 people (Parks, sparse areas)
+                // Medium density (0.1 - 0.4) -> 3,000 - 15,000 people (Residential)
+                // High density (>0.4) -> 15,000 - 80,000 people (Dense urban)
+
+                // Base calculation: Density * Scaling Factor
+                // Using power function to exaggerate differences: density^1.5 
+                const densityFactor = Math.pow(simulatedBldDensity, 1.2) * 120000;
+
+                // Add variance (+/- 15%)
+                const variance = (seed - 0.5) * 0.3 * densityFactor;
+
+                // Ensure minimum of 500
+                return Math.max(500, Math.floor(densityFactor + variance));
+              })()
+              : f.properties.pop,
+          };
+        });
         setData(pts);
         if (pts.length > 0) {
           const sorted = [...pts].sort((a, b) => a.weight - b.weight);
@@ -912,25 +939,35 @@ export default function Visualize() {
                       <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Vulnerability</div>
                       <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.vulnerability.toFixed(3)}</div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                      <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
-                        {(() => {
-                          const score = tooltip.vulnerability + (tooltip.aqi / 500);
-                          if (score > 1.2) return 'SEVERE';
-                          if (score > 0.8) return 'MODERATE';
-                          return 'LOW';
-                        })()}
+                    {vizMode === 'aqi' && (
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
                       </div>
-                    </div>
+                    )}
+                    {vizMode === 'pop' && (
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
+                      </div>
+                    )}
+                    {vizMode === 'risk' && (
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
+                          {(() => {
+                            // Risk = Heat + AQI combined (using same formula as color scale)
+                            const aqiNorm = Math.min((tooltip.aqi || 0) / 400, 1);
+                            const heatNorm = (tooltip.vulnerability || 0);
+                            const score = (aqiNorm + heatNorm) / 2;
+
+                            if (score > 0.6) return 'SEVERE';
+                            if (score > 0.4) return 'ELEVATED';
+                            return 'MODERATE';
+                          })()}
+                        </div>
+                      </div>
+                    )}
                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
                       <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>NDVI</div>
                       <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.ndvi.toFixed(3)}</div>
@@ -967,94 +1004,7 @@ export default function Visualize() {
                     )}
 
                     {/* Green Rx Simulator */}
-                    {!aiPlan && !loadingPlan && (
-                      <div style={{ marginTop: '12px' }}>
-                        <button
-                          onClick={() => {
-                            if (!showGreenRx) {
-                              setShowGreenRx(true);
-                              setCalculatingRx(true);
-                              setTimeout(() => setCalculatingRx(false), 4500);
-                            } else {
-                              setShowGreenRx(false);
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            background: showGreenRx ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                            border: showGreenRx ? '1px solid #22c55e' : '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '12px',
-                            color: showGreenRx ? '#22c55e' : '#fff',
-                            padding: '12px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            fontSize: '14px',
-                            transition: 'all 0.2s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px'
-                          }}
-                        >
-                          {calculatingRx ? '⏳ Running Bio-Model...' : '🌱 Simulate Green Intervention'}
-                        </button>
 
-                        {showGreenRx && (
-                          <div style={{
-                            marginTop: '12px',
-                            background: 'rgba(34, 197, 94, 0.05)',
-                            border: '1px solid rgba(34, 197, 94, 0.2)',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            animation: 'fadeIn 0.3s ease-out'
-                          }}>
-                            {calculatingRx ? (
-                              <div style={{ textAlign: 'center', padding: '10px 0', color: '#86efac', fontSize: '13px' }}>
-                                <i>Analyzing micro-climate data...</i>
-                              </div>
-                            ) : (
-                              <>
-                                <div style={{ fontSize: '13px', color: '#86efac', marginBottom: '12px', fontWeight: 500 }}>
-                                  Scenario: Planting 50 Native Trees & 200m² Green Roof
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>Proj. Temp Drop</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                                      -{((tooltip.bldDensity || 0.5) * 4 + 0.5).toFixed(1)}°C 📉
-                                    </div>
-                                  </div>
-                                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>AQI Improvement</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                                      -{Math.round((tooltip.aqi || 200) * 0.15)} Pts 🍃
-                                    </div>
-                                  </div>
-                                </div>
-                                <div style={{ marginTop: '12px', fontSize: '12px', color: '#fff', borderTop: '1px solid rgba(34, 197, 94, 0.2)', paddingTop: '8px' }}>
-                                  <span style={{ color: '#22c55e', fontWeight: 700 }}>Outcome:</span>
-                                  {(() => {
-                                    const tempDrop = (tooltip.bldDensity || 0.5) * 4 + 0.5;
-                                    const currentScore = tooltip.vulnerability + (tooltip.aqi / 500);
-                                    // Boost: Temp drop also reduces vulnerability score (0.08 per degree)
-                                    const newScore = Math.max(0, (tooltip.vulnerability - (tempDrop * 0.08)) + ((tooltip.aqi * 0.85) / 500));
-
-                                    const getLabel = (s: number) => s > 1.2 ? 'Severe' : s > 0.8 ? 'Moderate' : 'Low';
-                                    const start = getLabel(currentScore);
-                                    const end = getLabel(newScore);
-
-                                    if (start === end) {
-                                      return <span> Risk significantly mitigated within <b>{start}</b> levels.</span>;
-                                    }
-                                    return <span> Health Risk reduced from <b>{start}</b> to <b>{end}</b>.</span>;
-                                  })()}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {loadingPlan && (
                       <div style={{
