@@ -26,6 +26,7 @@ type PointData = {
   ndvi?: number;
   bldDensity?: number;
   vulnerability?: number;
+  health_risk?: number; // Added Type Definition
   aqi?: number;
   pop?: number;
 };
@@ -136,9 +137,11 @@ export default function Visualize() {
       })
       .catch(console.error);
 
-    fetch(`/api/vulnerability-points?v=${new Date().getTime()}`)
+    fetch(`/api/vulnerability-points?v=${Date.now()}`) // FORCE FRESH FETCH
       .then((res) => res.json())
       .then((geojson) => {
+        // [DEBUG] Log first few features to see if "health_risk" exists and is high
+        console.log("GeoJSON Loaded. Sample Feature:", geojson.features[0].properties);
         const pts: PointData[] = geojson.features.map((f: any) => {
           // Calculate simulated values upfront so they are available for other fields
           const simulatedBldDensity = f.properties.bldDensity || (f.properties.vulnerability * 0.8 + Math.random() * 0.2);
@@ -149,7 +152,10 @@ export default function Visualize() {
             ndvi: f.properties.ndvi,
             bldDensity: simulatedBldDensity,
             vulnerability: f.properties.vulnerability,
+            // [FIX] Ensure we explicitly capture health_risk from backend
+            health_risk: f.properties.health_risk,
             aqi: f.properties.aqi,
+            // Simulate realistic population data if backend returns default 1000
             // Simulate realistic population data if backend returns default 1000
             // Use deterministic "random" based on coordinates so it persists on reload
             pop: f.properties.pop === 1000
@@ -240,13 +246,13 @@ export default function Visualize() {
         return [100 + 100 * norm, 100 - 100 * norm, 255, 180 + 75 * norm];
       }
       if (vizMode === 'risk') {
-        // Risk = Heat + AQI combined
-        const aqiNorm = Math.min((d.aqi || 0) / 400, 1);
-        const heatNorm = (d.vulnerability || 0);
-        const risk = (aqiNorm + heatNorm) / 2;
-        if (risk > 0.6) return [255, 0, 0, 255]; // Extreme
-        if (risk > 0.4) return [255, 140, 0, 220]; // High
-        return [255, 255, 0, 180]; // Moderate
+        // [FIX] Use the backend's "health_risk" property directly.
+        // Previously we re-calculated it here, which ignored our custom "Outbreak" logic.
+        const risk = (d as any).health_risk || 0;
+
+        if (risk >= 0.8) return [255, 0, 0, 255]; // Severe (Red)
+        if (risk >= 0.5) return [255, 140, 0, 220]; // Elevated (Orange)
+        return [255, 255, 0, 180]; // Moderate (Yellow)
       }
 
       // Default: Heat Vulnerability

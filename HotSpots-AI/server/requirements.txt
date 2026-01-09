@@ -12,3 +12,4 @@ openai
 azure-cognitiveservices-speech
 python-dotenv
 gunicorn
+joblib
