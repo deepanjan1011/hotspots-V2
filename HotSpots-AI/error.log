@@ -1,0 +1,15 @@
+(node:2327) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/tuneWeightsGemini.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Error calling Gemini: Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
+    at GoogleAuth.getApplicationDefaultAsync (/Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/google-auth-library/build/src/auth/googleauth.js:284:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async #determineClient (/Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/google-auth-library/build/src/auth/googleauth.js:764:36)
+    at async GoogleAuth.getClient (/Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/google-auth-library/build/src/auth/googleauth.js:741:20)
+    at async GoogleAuth.getRequestHeaders (/Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/google-auth-library/build/src/auth/googleauth.js:793:24)
+    at async NodeAuth.addGoogleAuthHeaders (file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/@google/genai/dist/node/index.mjs:17905:29)
+    at async ApiClient.getHeadersInternal (file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/@google/genai/dist/node/index.mjs:11882:9)
+    at async ApiClient.includeExtraHttpOptionsToRequestInit (file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/@google/genai/dist/node/index.mjs:11736:31)
+    at async ApiClient.request (file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/@google/genai/dist/node/index.mjs:11675:23)
+    at async Models.generateContent (file:///Users/deepanjanpati/Documents/HotSpots-AI/HotSpots-AI/node_modules/@google/genai/dist/node/index.mjs:13072:24)

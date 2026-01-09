@@ -9,7 +9,7 @@ from shapely.geometry import Point, shape
 
 # Data Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "server/data")
+DATA_DIR = os.path.join(BASE_DIR, "HotSpots-AI/server/data")
 
 LST_PATH = os.path.join(DATA_DIR, "new delhi_lst.tif")
 NDVI_PATH = os.path.join(DATA_DIR, "new delhi_ndvi.tif")
@@ -57,9 +57,10 @@ def generate_real_delhi_data(n_points=2000):
     max_attempts = n_points * 5
     
     # Weights for Vulnerability Formula
-    W_TEMP = 0.5
-    W_NDVI = 0.3
-    W_DENS = 0.2
+    # Weights for Vulnerability Formula (AI Optimized)
+    W_TEMP = 0.35
+    W_NDVI = 0.30
+    W_DENS = 0.35
     
     # Pre-calculate normalization constants (approximate based on Delhi summer)
     MIN_TEMP, MAX_TEMP = 25.0, 50.0 # LST in Celsius

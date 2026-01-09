@@ -1,0 +1,26 @@
+[
+    {
+        "temp": 41.01,
+        "ndvi": 0.079,
+        "bldDensity": 0.002,
+        "vulnerability": 0.561
+    },
+    {
+        "temp": 35.17,
+        "ndvi": 0.354,
+        "bldDensity": 0.0,
+        "vulnerability": 0.352
+    },
+    {
+        "temp": 38.25,
+        "ndvi": 0.344,
+        "bldDensity": 0.037,
+        "vulnerability": 0.425
+    },
+    {
+        "temp": 40.98,
+        "ndvi": 0.076,
+        "bldDensity": 0.433,
+        "vulnerability": 0.648
+    }
+]
