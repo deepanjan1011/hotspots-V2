@@ -4,7 +4,17 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 IN_GEOJSON  = os.path.join(BASE, 'public', 'vulnerability_points.geojson')
 OUT_GEOJSON = os.path.join(BASE, 'public', 'tree_priority.geojson')
 
-w1, w2, w3   = 0.6, 0.2, 0.2
+WEIGHTS_FILE = os.path.join(BASE, 'server', 'weights.json')
+
+if os.path.exists(WEIGHTS_FILE):
+    with open(WEIGHTS_FILE, 'r') as f:
+        weights = json.load(f)
+        w1, w2, w3 = weights.get('w1', 0.6), weights.get('w2', 0.2), weights.get('w3', 0.2)
+    print(f"Loaded weights from {WEIGHTS_FILE}: w1={w1}, w2={w2}, w3={w3}")
+else:
+    w1, w2, w3 = 0.6, 0.2, 0.2
+    print("Using default weights.")
+
 delta_ndvi   = 0.2
 
 with open(IN_GEOJSON) as f:

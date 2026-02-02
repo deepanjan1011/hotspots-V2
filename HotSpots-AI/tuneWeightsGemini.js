@@ -54,6 +54,13 @@ Output ONLY valid JSON. No markdown, no explanation, no formatting.
     try {
       const weights = JSON.parse(text);
       console.log('➜ New weights:', weights);
+
+      // Save to file
+      const fs = require('fs');
+      const path = require('path');
+      const weightsPath = path.join(process.cwd(), 'server', 'weights.json');
+      fs.writeFileSync(weightsPath, JSON.stringify(weights, null, 2));
+      console.log('✔ Saved weights to', weightsPath);
     } catch (parseErr) {
       console.error("Failed to parse JSON:", parseErr);
       // Fallback or retry logic could go here
