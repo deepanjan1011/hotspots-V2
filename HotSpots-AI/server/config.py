@@ -1,10 +1,3 @@
-# Location Configuration
-# # Default: Toronto
-# CITY_NAME = "Toronto"
-# # Bounding Box: (min_lon, min_lat, max_lon, max_lat)
-# BBOX = (-79.6393, 43.4955, -79.1152, 43.8555)
-
-# Example: New Delhi, India
 CITY_NAME = "New Delhi"
 # (min_lon, min_lat, max_lon, max_lat)
 # (min_lon, min_lat, max_lon, max_lat)
