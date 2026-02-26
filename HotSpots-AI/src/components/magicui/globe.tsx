@@ -2,7 +2,7 @@
 
 import createGlobe, { COBEOptions } from "cobe";
 import { useMotionValue, useSpring } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ const MOVEMENT_DAMPING = 1400;
 const GLOBE_CONFIG: COBEOptions = {
   width: 800,
   height: 800,
-  onRender: () => {},
+  onRender: () => { },
   devicePixelRatio: 2,
   phi: 0,
   theta: 0.3,
@@ -50,6 +50,7 @@ export function Globe({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointerInteracting = useRef<number | null>(null);
   const pointerInteractionMovement = useRef(0);
+  const [mounted, setMounted] = useState(false);
 
   const r = useMotionValue(0);
   const rs = useSpring(r, {
@@ -74,6 +75,7 @@ export function Globe({
   };
 
   useEffect(() => {
+    setMounted(true);
     const onResize = () => {
       if (canvasRef.current) {
         width = canvasRef.current.offsetWidth;
@@ -109,22 +111,24 @@ export function Globe({
         className,
       )}
     >
-      <canvas
-        className={cn(
-          "size-full opacity-0 transition-opacity duration-500 [contain:layout_paint_size]",
-        )}
-        ref={canvasRef}
-        onPointerDown={(e) => {
-          pointerInteracting.current = e.clientX;
-          updatePointerInteraction(e.clientX);
-        }}
-        onPointerUp={() => updatePointerInteraction(null)}
-        onPointerOut={() => updatePointerInteraction(null)}
-        onMouseMove={(e) => updateMovement(e.clientX)}
-        onTouchMove={(e) =>
-          e.touches[0] && updateMovement(e.touches[0].clientX)
-        }
-      />
+      {mounted && (
+        <canvas
+          className={cn(
+            "size-full opacity-0 transition-opacity duration-[2s] [contain:layout_paint_size]",
+          )}
+          ref={canvasRef}
+          onPointerDown={(e) => {
+            pointerInteracting.current = e.clientX;
+            updatePointerInteraction(e.clientX);
+          }}
+          onPointerUp={() => updatePointerInteraction(null)}
+          onPointerOut={() => updatePointerInteraction(null)}
+          onMouseMove={(e) => updateMovement(e.clientX)}
+          onTouchMove={(e) =>
+            e.touches[0] && updateMovement(e.touches[0].clientX)
+          }
+        />
+      )}
     </div>
   );
 }

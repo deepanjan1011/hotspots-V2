@@ -92,7 +92,7 @@ async def get_vulnerability_points():
             ms_inputs.append([temp, ndvi, bld])
 
         # Mock AQI: Higher in dense areas, lower in green areas
-        # Delhi baseline ~200. +150 for dense urban. -100 for forests.
+        # Chennai baseline ~200. +150 for dense urban. -100 for forests.
         # FIX: Added significant noise (randomness) to break up artificial "blocks" of color.
         base_aqi = 200 + (bld * 150) - (ndvi * 100)
         
@@ -135,8 +135,8 @@ async def get_vulnerability_points():
             # Risk isn't just Heat + Pollution. It also depends on "Vulnerable Population" (Age, Income).
             # We simulate a "Social Vulnerability Index" causing random high-risk clusters.
             
-            # [IMPROVED REALISM] Health Risk v5 (Delhi Specific)
-            # Context: New Delhi has high AQI and consistent heat.
+            # [IMPROVED REALISM] Health Risk v5 (Chennai Specific)
+            # Context: Chennai has high AQI and consistent heat.
             # Logic: 
             # 1. High AQI (>300) = AUTOMATIC SEVERE RISK (Red)
             # 2. High Density (>0.8) + Heat = AUTOMATIC HIGH RISK (Orange/Red)
@@ -145,7 +145,7 @@ async def get_vulnerability_points():
             aqi_val = data['features'][i]['properties']['aqi']
             
             if aqi_val > 300:
-                # Delhi Poisonous Air -> Severe Risk
+                # Chennai Poisonous Air -> Severe Risk
                  final_risk = 0.95 + random.uniform(0, 0.05)
             elif bld > 0.8 and vuln_score > 0.6:
                 # Dense Slums/Urban Heat Island -> High Risk

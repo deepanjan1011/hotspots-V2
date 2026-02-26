@@ -26,13 +26,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta property="og:title" content="HeatShield AI" />
-        <meta property="og:description" content="Explore Delhi's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
+        <meta property="og:description" content="Explore Chennai's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
         <meta property="og:image" content="/ogimage.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://heatshield-ai.vercel.app/" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="HeatShield AI" />
-        <meta name="twitter:description" content="Explore Delhi's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
+        <meta name="twitter:description" content="Explore Chennai's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
         <meta name="twitter:image" content="/ogimage.png" />
       </head>
       <body
