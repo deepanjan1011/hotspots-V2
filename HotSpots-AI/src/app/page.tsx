@@ -191,7 +191,7 @@ export default function Home() {
           by="word"
           className="text-[15px] mb-8 text-[#444] text-center max-w-[480px]"
         >
-          Explore urban heat vulnerability and tree planting priorities in Chennai for sustainable development.
+          Explore urban heat vulnerability and tree planting priorities in Ramapuram, Chennai, Tamil Nadu for sustainable development.
         </TextAnimate>
         <div className="landing-btn-row" style={{ display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 24 }}>
           <Link href="/visualize" style={{ textDecoration: 'none' }}>
@@ -303,7 +303,7 @@ export default function Home() {
           So what did we do about it?
         </TextAnimate>
         <TextAnimate animation="slideUp" by="word" as="p" className="text-lg text-[#444] mb-8">
-          We put on our thinking caps and built a machine learning model that accurately showcases heat hotspots in Chennai based on vegetation and urban island heat influencing factors.
+          We put on our thinking caps and built a machine learning model that accurately showcases heat hotspots in and around Ramapuram, Chennai, based on vegetation and urban heat island influencing factors.
         </TextAnimate>
         <p className="text-lg text-[#444] mb-8 mt-2">
           TLDR; Check for trees and building density around a specific location. Mix it in with temperatures and some special ML magic and you get a heat vulnerability score.
@@ -345,7 +345,7 @@ export default function Home() {
           </TextAnimate>
           <div className="max-w-2xl mx-auto mt-2 text-base text-[#444] text-center">
             <TextAnimate animation="slideUp" by="word" as="span">
-              As part of feature extraction, we rasterized both building density and tree density into uniform 100 m grid cells across Chennai.
+              As part of feature extraction, we rasterized both building density and tree density into uniform 100 m grid cells across Ramapuram and the surrounding Chennai neighborhoods.
             </TextAnimate>
             <br /><br />
             These become two of the three columns in our feature matrix <span className="font-mono">X</span> (the third being normalized temperature). We then fed <span className="font-mono">X</span> into our Random Forest, which learned how those spatial patterns combine to predict heat‐vulnerability scores.

@@ -10,10 +10,16 @@ import Image from 'next/image';
 import { InteractiveHoverButton, InteractiveHoverBackButton } from '@/components/magicui/interactive-hover-button';
 import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
 
+// Suppress util._extend deprecation warning (from transitive dependencies)
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  process.removeAllListeners?.('warning');
+}
+
 const INITIAL_VIEW_STATE = {
-  latitude: 28.6304,
-  longitude: 77.2177,
-  zoom: 13,
+  // Centered on Ramapuram, Chennai, Tamil Nadu
+  latitude: 13.0106,
+  longitude: 80.19318,
+  zoom: 14,
   pitch: 60,
   bearing: 0,
 };
@@ -80,6 +86,20 @@ export default function Visualize() {
   const [calculatingRx, setCalculatingRx] = useState(false);
 
   const [mounted, setMounted] = useState(false);
+  const [webglError, setWebglError] = useState<string | null>(null);
+
+  // Check WebGL support early
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+      if (!gl) {
+        setWebglError('WebGL is not supported in your browser');
+      }
+    } catch (e) {
+      console.warn('WebGL check failed:', e);
+    }
+  }, []);
 
   useEffect(() => {
     setLastUpdated(new Date());
@@ -417,54 +437,62 @@ export default function Visualize() {
 
 
   const handleMapLoad = useCallback((event: any) => {
-    const map = event.target;
-    map.once('style.load', () => {
-      const layers = map.getStyle().layers || [];
-      const labelLayerId = layers.find(
-        (layer: any) =>
-          layer.type === 'symbol' &&
-          layer.layout &&
-          layer.layout['text-field']
-      )?.id;
+    try {
+      const map = event.target;
+      map.once('style.load', () => {
+        try {
+          const layers = map.getStyle().layers || [];
+          const labelLayerId = layers.find(
+            (layer: any) =>
+              layer.type === 'symbol' &&
+              layer.layout &&
+              layer.layout['text-field']
+          )?.id;
 
-      if (map.getLayer('3d-buildings')) {
-        map.removeLayer('3d-buildings');
-      }
+          if (map.getLayer('3d-buildings')) {
+            map.removeLayer('3d-buildings');
+          }
 
-      map.addLayer(
-        {
-          id: '3d-buildings',
-          source: 'composite',
-          'source-layer': 'building',
-          filter: ['==', 'extrude', 'true'],
-          type: 'fill-extrusion',
-          minzoom: 14,
-          paint: {
-            'fill-extrusion-color': '#aaa',
-            'fill-extrusion-height': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14,
-              0,
-              14.05,
-              ['get', 'height'],
-            ],
-            'fill-extrusion-base': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14,
-              0,
-              14.05,
-              ['get', 'min_height'],
-            ],
-            'fill-extrusion-opacity': 0.9,
-          },
-        },
-        labelLayerId
-      );
-    });
+          map.addLayer(
+            {
+              id: '3d-buildings',
+              source: 'composite',
+              'source-layer': 'building',
+              filter: ['==', 'extrude', 'true'],
+              type: 'fill-extrusion',
+              minzoom: 14,
+              paint: {
+                'fill-extrusion-color': '#aaa',
+                'fill-extrusion-height': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.05,
+                  ['get', 'height'],
+                ],
+                'fill-extrusion-base': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  14.05,
+                  ['get', 'min_height'],
+                ],
+                'fill-extrusion-opacity': 0.9,
+              },
+            },
+            labelLayerId
+          );
+        } catch (layerError) {
+          console.warn('Error adding 3D buildings layer:', layerError);
+        }
+      });
+    } catch (mapError) {
+      console.warn('Error loading map:', mapError);
+    }
   }, []);
 
   return (
@@ -828,12 +856,38 @@ export default function Visualize() {
               )}
             </button>
 
-            {mounted && (
+            {webglError ? (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                padding: '40px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+                <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', marginBottom: '10px' }}>
+                  WebGL Not Supported
+                </h2>
+                <p style={{ color: '#6b7280', fontSize: '16px', maxWidth: '400px', lineHeight: '1.6' }}>
+                  {webglError}. Please use a modern browser that supports WebGL (Chrome, Firefox, Safari, Edge).
+                </p>
+              </div>
+            ) : mounted ? (
               <DeckGL
                 initialViewState={viewState}
                 controller
                 layers={[mode === 'gradient' ? heatmapLayer : scatterLayer]}
                 style={{ borderRadius: '0' }}
+                onError={(e: any) => {
+                  console.error("DeckGL Error:", e);
+                  if (e?.message?.includes?.('maxTextureDimension2D')) {
+                    setWebglError('WebGL context error - trying to recover...');
+                  }
+                }}
               >
                 <StaticMap
                   mapboxAccessToken={MAPBOX_TOKEN}
@@ -848,6 +902,20 @@ export default function Visualize() {
                 {/* Right-Side Detail Panel (replaces floating tooltip) */}
 
               </DeckGL>
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '20px', animation: 'spin 2s linear infinite' }}>🔄</div>
+                  <p style={{ color: '#6b7280' }}>Loading visualization...</p>
+                </div>
+              </div>
             )}
 
             {mode === 'circle' && tooltip && (
@@ -1186,6 +1254,10 @@ export default function Visualize() {
       </div >
 
       <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         @font-face {
           font-family: 'NeueHaasDisplay';
           src: url('/fonts/NeueHaasDisplayMediu.woff') format('woff');

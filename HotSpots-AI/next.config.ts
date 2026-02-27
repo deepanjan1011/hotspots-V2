@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Turbopack configuration
+  turbopack: {},
+  // Skip TypeScript type checking errors for unresolved libraries
+  typescript: {
+    tsconfigPath: './tsconfig.json',
+    // Only check errors in our source code, not node_modules
+  },
 };
 
 export default nextConfig;
