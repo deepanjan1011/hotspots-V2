@@ -78,6 +78,46 @@ async def get_vulnerability_points():
     import random
     random.seed(42) # Ensure consistency
 
+    # Define center coordinates (Chennai in this case)
+    center_lat = (BBOX[1] + BBOX[3]) / 2
+    center_lon = (BBOX[0] + BBOX[2]) / 2
+    
+    # Try fetching real AQI prediction
+    city_aqi_prediction = None
+    owm_key = os.getenv("OPENWEATHERMAP_API_KEY")
+    
+    if owm_key:
+        try:
+            import requests
+            # Fetch Air Pollution Forecast
+            response = requests.get(f"http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat={center_lat}&lon={center_lon}&appid={owm_key}")
+            if response.status_code == 200:
+                forecast_data = response.json()
+                
+                # We want to find a prediction. 
+                # OpenWeatherMap provides hourly data. Let's average the AQI for the next 24 hours.
+                aqi_sum = 0
+                count = 0
+                for item in forecast_data.get('list', [])[:24]:
+                    # OWM AQI is 1(Good) - 5(Very Poor). We convert it to a standard 0-500 scale roughly
+                    owm_aqi = item['main']['aqi']
+                    
+                    # Rough mapping OWM (1-5) to US AQI (0-500)
+                    mapping = {1: 40, 2: 80, 3: 130, 4: 180, 5: 250}
+                    standard_aqi = mapping.get(owm_aqi, 200)
+                    
+                    aqi_sum += standard_aqi
+                    count += 1
+                
+                if count > 0:
+                    city_aqi_prediction = aqi_sum / count
+        except Exception as e:
+            print(f"Error fetching OWM AQI: {e}")
+            
+    # Fallback if API fails or no key
+    if city_aqi_prediction is None:
+        city_aqi_prediction = 150 # Default moderate/unhealthy
+
     # [OPTIMIZATION] Prepare batch data for ML model
     ms_inputs = [] 
     
@@ -91,38 +131,20 @@ async def get_vulnerability_points():
         if rf_model:
             ms_inputs.append([temp, ndvi, bld])
 
-        # Mock AQI: Higher in dense areas, lower in green areas
-        # Chennai baseline ~200. +150 for dense urban. -100 for forests.
-        # FIX: Added significant noise (randomness) to break up artificial "blocks" of color.
-        base_aqi = 200 + (bld * 150) - (ndvi * 100)
+        # Predicted AQI Calculation:
+        # We start with the city-wide prediction and apply local variance based on environment.
+        # Dense building areas trap pollution (+), green areas filter it (-).
         
-        # Add "Organic" variance: some random spots are cleaner/dirtier
-        organic_factor = random.choice([-40, 0, 0, 40]) # 25% chance of deviation
-        noise = random.randint(-40, 40) 
+        # Local adjustment based on density and vegetation
+        local_variance = (bld * 50) - (ndvi * 40)
         
-        final_aqi = base_aqi + noise + organic_factor
-        props['aqi'] = max(50, min(500, int(final_aqi)))
+        # Add slight random noise to prevent artificial looking blocks
+        noise = random.randint(-15, 15) 
         
-        
-        # [IMPROVED REALISM] Population
-        # Old way: bld * 80000 (too linear)
-        # New way: "Zoning" logic. 
-        # Some high density areas are offices (low night pop), some are slums/apartments (high night pop).
-        
-        # 1. Determine "Zone Type" randomly based on density
-        if bld > 0.7:
-             # High density: 50% chance of being Commercial (Lower pop) vs Residential (High pop)
-            is_commercial = random.choice([True, False])
-            pop_factor = 40000 if is_commercial else 120000
-        else:
-            # Low density: Usually residential
-            pop_factor = 60000
+        final_aqi = city_aqi_prediction + local_variance + noise
+        props['aqi'] = max(20, min(500, int(final_aqi)))
 
-        # 2. Add organic noise (Standard Deviation)
-        # This makes it look like real census data (not a smooth gradient)
-        noise = random.randint(-15000, 15000)
-        final_pop = (bld * pop_factor) + noise
-        props['pop'] = int(max(500, final_pop)) # Floor at 500
+        # NOTE: Population data generator has been permanently removed
 
     # [OPTIMIZATION] Run Batch Prediction (1 call instead of 2000)
     if rf_model and len(ms_inputs) > 0:
@@ -131,33 +153,24 @@ async def get_vulnerability_points():
             vuln_score = float(pred)
             data['features'][i]['properties']['vulnerability'] = vuln_score
             
-            # [IMPROVED REALISM] Health Risk
-            # Risk isn't just Heat + Pollution. It also depends on "Vulnerable Population" (Age, Income).
-            # We simulate a "Social Vulnerability Index" causing random high-risk clusters.
-            
             # [IMPROVED REALISM] Health Risk v5 (Chennai Specific)
-            # Context: Chennai has high AQI and consistent heat.
-            # Logic: 
-            # 1. High AQI (>300) = AUTOMATIC SEVERE RISK (Red)
-            # 2. High Density (>0.8) + Heat = AUTOMATIC HIGH RISK (Orange/Red)
-            # 3. Random "Outbreaks" (10%) for variation.
-            
             aqi_val = data['features'][i]['properties']['aqi']
+            bld = data['features'][i]['properties'].get('bld_density', 0)
             
             if aqi_val > 300:
-                # Chennai Poisonous Air -> Severe Risk
+                # Severe Risk due to AQI
                  final_risk = 0.95 + random.uniform(0, 0.05)
             elif bld > 0.8 and vuln_score > 0.6:
-                # Dense Slums/Urban Heat Island -> High Risk
+                # High Density + Heat = Severe Risk
                 final_risk = 0.85 + random.uniform(0, 0.1)
             elif random.random() < 0.10:
-                # Random sporadic issues (10% chance)
+                # Random sporadic issues
                 final_risk = 0.90
             else:
                 # Normal variation
                 aqi_norm = aqi_val / 500.0
                 base_risk = 0.3 + (vuln_score * 0.4) + (aqi_norm * 0.3)
-                final_risk = min(0.7, base_risk) # Cap normal risk at Orange
+                final_risk = min(0.7, base_risk) 
             
             # Normalize
             data['features'][i]['properties']['health_risk'] = max(0.1, min(1.0, final_risk))

@@ -34,7 +34,6 @@ type PointData = {
   vulnerability?: number;
   health_risk?: number; // Added Type Definition
   aqi?: number;
-  pop?: number;
 };
 
 type TooltipInfo = {
@@ -43,8 +42,8 @@ type TooltipInfo = {
   ndvi: number;
   bldDensity: number;
   vulnerability: number;
+  health_risk: number;
   aqi: number;
-  pop: number;
 } | null;
 
 type AIPlan = {
@@ -66,7 +65,7 @@ function formatTime(date: Date | null) {
 export default function Visualize() {
   const [data, setData] = useState<PointData[]>([]);
   const [mode, setMode] = useState<'gradient' | 'circle'>('circle');
-  const [vizMode, setVizMode] = useState<'heat' | 'aqi' | 'risk' | 'pop'>('heat');
+  const [vizMode, setVizMode] = useState<'heat' | 'aqi' | 'risk'>('heat');
   const [tooltip, setTooltip] = useState<TooltipInfo>(null);
   const [quantiles, setQuantiles] = useState<{ q1: number, q2: number }>({ q1: 0.33, q2: 0.66 });
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,30 +177,6 @@ export default function Visualize() {
             // [FIX] Ensure we explicitly capture health_risk from backend
             health_risk: f.properties.health_risk,
             aqi: f.properties.aqi,
-            // Simulate realistic population data if backend returns default 1000
-            // Simulate realistic population data if backend returns default 1000
-            // Use deterministic "random" based on coordinates so it persists on reload
-            pop: f.properties.pop === 1000
-              ? (() => {
-                // Create a consistent seed from coordinates
-                const seed = (Math.abs(f.geometry.coordinates[0] * 1000) + Math.abs(f.geometry.coordinates[1] * 1000)) % 1;
-
-                // Realism: 
-                // Very low density (<0.1) -> 500 - 3,000 people (Parks, sparse areas)
-                // Medium density (0.1 - 0.4) -> 3,000 - 15,000 people (Residential)
-                // High density (>0.4) -> 15,000 - 80,000 people (Dense urban)
-
-                // Base calculation: Density * Scaling Factor
-                // Using power function to exaggerate differences: density^1.5 
-                const densityFactor = Math.pow(simulatedBldDensity, 1.2) * 120000;
-
-                // Add variance (+/- 15%)
-                const variance = (seed - 0.5) * 0.3 * densityFactor;
-
-                // Ensure minimum of 500
-                return Math.max(500, Math.floor(densityFactor + variance));
-              })()
-              : f.properties.pop,
           };
         });
         setData(pts);
@@ -221,12 +196,10 @@ export default function Visualize() {
     getPosition: (d) => d.position,
     getWeight: (d) => {
       if (vizMode === 'aqi') return (d.aqi || 0) / 500;
-      if (vizMode === 'pop') return (d.pop || 0) / 60000;
       if (vizMode === 'risk') {
         const aqiNorm = Math.min((d.aqi || 0) / 500, 1);
         const heatNorm = d.weight;
-        const popNorm = Math.min((d.pop || 0) / 60000, 1);
-        return (aqiNorm + heatNorm + popNorm) / 3;
+        return (aqiNorm + heatNorm) / 2;
       }
       return d.weight;
     },
@@ -261,12 +234,6 @@ export default function Visualize() {
         if (val <= 200) return [255, 126, 0, 200];
         if (val <= 300) return [255, 0, 0, 200];
         return [126, 0, 35, 220];
-      }
-      if (vizMode === 'pop') {
-        const val = d.pop || 0;
-        // Pop Scale: Light Blue -> Dark Purple
-        const norm = Math.min(val / 30000, 1);
-        return [100 + 100 * norm, 100 - 100 * norm, 255, 180 + 75 * norm];
       }
       if (vizMode === 'risk') {
         // [FIX] Use the backend's "health_risk" property directly.
@@ -305,8 +272,8 @@ export default function Visualize() {
           ndvi: info.object.ndvi ?? 0,
           bldDensity: info.object.bldDensity ?? 0,
           vulnerability: info.object.vulnerability ?? info.object.weight ?? 0,
+          health_risk: info.object.health_risk ?? 0,
           aqi: info.object.aqi ?? 0,
-          pop: info.object.pop ?? 0,
         });
       } else {
         setTooltip(null);
@@ -614,6 +581,14 @@ export default function Visualize() {
                       {data.length > 0 ? (data.reduce((sum, d) => sum + d.weight, 0) / data.length).toFixed(3) : '0.000'}
                     </span>
                   </div>
+                  {tooltip && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: 500 }}>Predicted AQI:</span>
+                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
+                        {tooltip.aqi}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{
                   marginTop: '18px',
@@ -715,8 +690,7 @@ export default function Visualize() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {[
                     { id: 'heat', label: 'Heat Vuln.' },
-                    { id: 'aqi', label: 'Air Quality' },
-                    { id: 'pop', label: 'Population' },
+                    { id: 'aqi', label: 'Predicted AQI' },
                     { id: 'risk', label: 'Health Risk' }
                   ].map((opt) => (
                     <button
@@ -796,15 +770,7 @@ export default function Visualize() {
                     </div>
                   </>
                 )}
-                {vizMode === 'pop' && (
-                  <>
-                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600, color: '#F86D10' }}>Population Density</h3>
-                    <div style={{ height: '12px', background: 'linear-gradient(90deg, #ADD8E6, #00008B)', borderRadius: '6px' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888', marginTop: 4 }}>
-                      <span>Low</span><span>High</span>
-                    </div>
-                  </>
-                )}
+
               </div>
             </div>
           </div>
@@ -1020,14 +986,8 @@ export default function Visualize() {
                     </div>
                     {vizMode === 'aqi' && (
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>AQI</div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Predicted AQI</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
-                      </div>
-                    )}
-                    {vizMode === 'pop' && (
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
-                        <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Population</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{tooltip.pop?.toLocaleString()}</div>
                       </div>
                     )}
                     {vizMode === 'risk' && (
@@ -1035,13 +995,9 @@ export default function Visualize() {
                         <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Risk Level</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
                           {(() => {
-                            // Risk = Heat + AQI combined (using same formula as color scale)
-                            const aqiNorm = Math.min((tooltip.aqi || 0) / 400, 1);
-                            const heatNorm = (tooltip.vulnerability || 0);
-                            const score = (aqiNorm + heatNorm) / 2;
-
-                            if (score > 0.6) return 'SEVERE';
-                            if (score > 0.4) return 'ELEVATED';
+                            const score = tooltip.health_risk || 0;
+                            if (score >= 0.8) return 'SEVERE';
+                            if (score >= 0.5) return 'ELEVATED';
                             return 'MODERATE';
                           })()}
                         </div>
