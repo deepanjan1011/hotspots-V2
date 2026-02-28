@@ -37,7 +37,6 @@
     "@tailwindcss/postcss": "^4",
     "@types/long": "^5.0.0",
     "@types/mapbox": "^1.6.45",
-    "@types/mapbox__point-geometry": "^1.0.87",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -47,5 +46,8 @@
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@types/mapbox__point-geometry": "1.0.86"
   }
 }
