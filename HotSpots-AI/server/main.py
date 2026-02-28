@@ -153,27 +153,17 @@ async def get_vulnerability_points():
             vuln_score = float(pred)
             data['features'][i]['properties']['vulnerability'] = vuln_score
             
-            # [IMPROVED REALISM] Health Risk v5 (Chennai Specific)
+            # [IMPROVED REALISM] Health Risk v6 (Clean 50/50 Split)
             aqi_val = data['features'][i]['properties']['aqi']
-            bld = data['features'][i]['properties'].get('bld_density', 0)
             
-            if aqi_val > 300:
-                # Severe Risk due to AQI
-                 final_risk = 0.95 + random.uniform(0, 0.05)
-            elif bld > 0.8 and vuln_score > 0.6:
-                # High Density + Heat = Severe Risk
-                final_risk = 0.85 + random.uniform(0, 0.1)
-            elif random.random() < 0.10:
-                # Random sporadic issues
-                final_risk = 0.90
-            else:
-                # Normal variation
-                aqi_norm = aqi_val / 500.0
-                base_risk = 0.3 + (vuln_score * 0.4) + (aqi_norm * 0.3)
-                final_risk = min(0.7, base_risk) 
+            # Normalize AQI to a 0-1 scale (capped at 500 for normalization)
+            aqi_norm = min(aqi_val / 500.0, 1.0)
             
-            # Normalize
-            data['features'][i]['properties']['health_risk'] = max(0.1, min(1.0, final_risk))
+            # Pure 50/50 split of Heat Vulnerability and AQI
+            final_risk = (vuln_score * 0.5) + (aqi_norm * 0.5)
+            
+            # Normalize just to be perfectly safe
+            data['features'][i]['properties']['health_risk'] = max(0.0, min(1.0, final_risk))
 
     return data
 

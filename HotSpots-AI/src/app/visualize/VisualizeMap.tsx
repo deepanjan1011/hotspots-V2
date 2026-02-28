@@ -241,8 +241,8 @@ export default function Visualize() {
         // Use the backend's "health_risk" property directly.
         const risk = (d as any).health_risk || 0;
 
-        if (risk >= 0.8) return [255, 0, 0, 255]; // Severe (Red)
-        if (risk >= 0.5) return [255, 140, 0, 220]; // Elevated (Orange)
+        if (risk >= 0.7) return [255, 0, 0, 255]; // Severe (Red)
+        if (risk >= 0.4) return [255, 140, 0, 220]; // Elevated (Orange)
         return [255, 255, 0, 180]; // Moderate (Yellow)
       }
 
@@ -1013,8 +1013,8 @@ export default function Visualize() {
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
                           {(() => {
                             const score = tooltip.health_risk || 0;
-                            if (score >= 0.8) return 'SEVERE';
-                            if (score >= 0.5) return 'ELEVATED';
+                            if (score >= 0.7) return 'SEVERE';
+                            if (score >= 0.4) return 'ELEVATED';
                             return 'MODERATE';
                           })()}
                         </div>
