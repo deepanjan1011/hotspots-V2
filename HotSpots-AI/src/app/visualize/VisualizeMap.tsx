@@ -226,6 +226,7 @@ export default function Visualize() {
     getPosition: (d) => d.position,
     getRadius: (d) => 80 + 200 * d.weight,
     getFillColor: (d) => {
+      // Force checking string value instead of relying on types or stale closures just in case
       if (vizMode === 'aqi') {
         const val = d.aqi || 0;
         // AQI Scale: Green(0-50) -> Yellow(51-100) -> Orange(101-200) -> Red(201-300) -> Maroon(300+)
@@ -235,9 +236,9 @@ export default function Visualize() {
         if (val <= 300) return [255, 0, 0, 200];
         return [126, 0, 35, 220];
       }
+
       if (vizMode === 'risk') {
-        // [FIX] Use the backend's "health_risk" property directly.
-        // Previously we re-calculated it here, which ignored our custom "Outbreak" logic.
+        // Use the backend's "health_risk" property directly.
         const risk = (d as any).health_risk || 0;
 
         if (risk >= 0.8) return [255, 0, 0, 255]; // Severe (Red)
@@ -280,7 +281,8 @@ export default function Visualize() {
       }
     },
     updateTriggers: {
-      getFillColor: [quantiles, vizMode]
+      getFillColor: [quantiles, vizMode],
+      getRadius: [vizMode]
     }
   });
 
@@ -707,7 +709,9 @@ export default function Visualize() {
                         border: vizMode === opt.id ? '2px solid #F86D10' : '2px solid transparent',
                         background: vizMode === opt.id ? 'rgba(248,109,16,0.2)' : 'rgba(255,255,255,0.05)',
                         color: vizMode === opt.id ? '#F86D10' : '#888',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        // Make the Health Risk button span both columns to center it
+                        gridColumn: opt.id === 'risk' ? 'span 2' : 'auto'
                       }}
                     >
                       {opt.label}
@@ -987,7 +991,20 @@ export default function Visualize() {
                     {vizMode === 'aqi' && (
                       <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
                         <div style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>Predicted AQI</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: tooltip.aqi > 200 ? '#ff4d4d' : '#4dff4d' }}>{tooltip.aqi}</div>
+                        <div style={{
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          color: (() => {
+                            const val = tooltip.aqi || 0;
+                            if (val <= 50) return '#00e400'; // Green
+                            if (val <= 100) return '#ffff00'; // Yellow
+                            if (val <= 200) return '#ff7e00'; // Orange
+                            if (val <= 300) return '#ff0000'; // Red
+                            return '#7e0023'; // Maroon
+                          })()
+                        }}>
+                          {tooltip.aqi}
+                        </div>
                       </div>
                     )}
                     {vizMode === 'risk' && (
