@@ -303,7 +303,7 @@ export default function Home() {
           So what did we do about it?
         </TextAnimate>
         <TextAnimate animation="slideUp" by="word" as="p" className="text-lg text-[#444] mb-8">
-          We put on our thinking caps and built a machine learning model that accurately showcases heat hotspots in and around Ramapuram, Chennai, based on vegetation and urban heat island influencing factors.
+          We put on our thinking caps and built a machine learning model that accurately showcases heat hotspots in and around Ramapuram, Chennai, Tamil Nadu, based on vegetation and urban heat island influencing factors.
         </TextAnimate>
         <p className="text-lg text-[#444] mb-8 mt-2">
           TLDR; Check for trees and building density around a specific location. Mix it in with temperatures and some special ML magic and you get a heat vulnerability score.
@@ -314,20 +314,20 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-8">
           <div className="flex flex-col items-center">
             <div className="relative w-80 h-80 rounded-lg overflow-hidden group bg-white animate-premium-float animate-subtle-sheen">
-              <img src="/NDVI_delhi.png" alt="NDVI raster" className="w-full h-full object-cover" />
+              <img src="/NDVI_chennai.png" alt="NDVI raster" className="w-full h-full object-cover" />
             </div>
             <div className="mt-20 text-sm text-[#444] text-left w-80">
               <div className="font-semibold">Google Earth Rasterization of NDVI</div>
-              NDVI raster shows vegetation health and density across the city, with brighter areas indicating more vegetation.
+              NDVI raster shows vegetation health and density across Ramapuram, with brighter areas indicating more vegetation.
             </div>
           </div>
           <div className="flex flex-col items-center">
             <div className="relative w-80 h-80 rounded-lg overflow-hidden group bg-white animate-premium-float animate-subtle-sheen" style={{ animationDelay: '1s' }}>
-              <img src="/LST_delhi.png" alt="LST raster" className="w-full h-full object-cover" />
+              <img src="/LST_chennai.png" alt="LST raster" className="w-full h-full object-cover" />
             </div>
             <div className="mt-20 text-sm text-[#444] text-left w-80">
               <div className="font-semibold">Google Earth Rasterization of LST</div>
-              LST raster shows land surface temperature across the area, with brighter areas indicating higher temperatures (hotter urban heat islands) <br /> <br />*Notice how areas near the waterbody are darker which corresponds to cooler temperatures.
+              LST raster shows land surface temperature across Ramapuram, with brighter areas indicating higher temperatures (hotter urban heat islands) <br /> <br />*Notice how areas near the waterbody are darker which corresponds to cooler temperatures.
             </div>
           </div>
         </div>
@@ -357,7 +357,7 @@ export default function Home() {
               </div>
               <div className="mt-6 text-sm text-[#444] text-left w-96">
                 <div className="font-semibold">Tree Density Raster</div>
-                Tree density raster shows the distribution of tree cover across the city. Each pixel in the grid represents the density of trees in that area—<span className="font-semibold text-[#1a5d1a]">darker green areas</span> indicate higher tree density, while <span className="font-semibold text-[#8fbc8f]">lighter areas</span> indicate fewer trees.<br />
+                Tree density raster shows the distribution of tree cover across Ramapuram. Each pixel in the grid represents the density of trees in that area—<span className="font-semibold text-[#1a5d1a]">darker green areas</span> indicate higher tree density, while <span className="font-semibold text-[#8fbc8f]">lighter areas</span> indicate fewer trees.<br />
                 <br />
                 <span className="italic">In ML terms: Vegetation input (proxy for NDVI), representing normalized tree/vegetation cover for each 100 m cell.</span>
               </div>
@@ -368,7 +368,7 @@ export default function Home() {
               </div>
               <div className="mt-6 text-sm text-[#444] text-left w-96">
                 <div className="font-semibold">Building Density Raster</div>
-                Building density raster shows the concentration of buildings across the city. Each pixel in the grid represents the density of buildings in that area—<span className="font-semibold text-[#8b0000]">darker red areas</span> indicate more buildings, while <span className="font-semibold text-[#ffcccc]">lighter areas</span> indicate fewer buildings.<br />
+                Building density raster shows the concentration of buildings across Ramapuram. Each pixel in the grid represents the density of buildings in that area—<span className="font-semibold text-[#8b0000]">darker red areas</span> indicate more buildings, while <span className="font-semibold text-[#ffcccc]">lighter areas</span> indicate fewer buildings.<br />
                 <br />
                 <span className="italic">In ML terms: Urbanization input, showing how built-up each grid cell is (m² of roof per 10,000 m²).</span>
               </div>

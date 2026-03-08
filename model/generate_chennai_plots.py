@@ -8,12 +8,12 @@ from rasterio.plot import show
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "server/data")
+DATA_DIR = os.path.join(BASE_DIR, "HotSpots-AI/server/data")
 OUTPUT_DIR = os.path.join(BASE_DIR, "HotSpots-AI/public")
 
-LST_PATH = os.path.join(DATA_DIR, "new delhi_lst.tif")
-NDVI_PATH = os.path.join(DATA_DIR, "new delhi_ndvi.tif")
-BUILDINGS_PATH = os.path.join(DATA_DIR, "new delhi_buildings.shp")
+LST_PATH = os.path.join(DATA_DIR, "chennai_lst.tif")
+NDVI_PATH = os.path.join(DATA_DIR, "chennai_ndvi.tif")
+BUILDINGS_PATH = os.path.join(DATA_DIR, "chennai_buildings.shp")
 
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
