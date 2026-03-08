@@ -27,10 +27,10 @@ import {
 } from "@/components/ui/chart";
 import { AnimatedBeam } from '@/components/magicui/animated-beam';
 import { Cpu, User, Settings } from 'lucide-react';
-import React, { forwardRef, useRef, useState } from 'react';
+import React, { forwardRef, useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { VelocityScroll } from '@/components/magicui/scroll-based-velocity';
-import { Meteors } from '@/components/magicui/meteors';
+
 
 const heatDeathsData = [
   { year: '', deaths: 250000 },
@@ -105,6 +105,63 @@ Chip.displayName = "Chip";
 
 const TOOLTIP_HIDE_DELAY = 300;
 
+type Particle = {
+  size: number; left: number; bottom: number;
+  duration: number; delay: number; drift: number;
+  color: string; glow: string;
+};
+
+const COLORS = [
+  ['rgba(248,109,16,0.55)', 'rgba(248,109,16,0.25)'],
+  ['rgba(251,191,36,0.55)', 'rgba(251,191,36,0.25)'],
+  ['rgba(239,68,68,0.55)', 'rgba(239,68,68,0.25)'],
+  ['rgba(249,115,22,0.55)', 'rgba(249,115,22,0.25)'],
+];
+
+function makeParticles(count: number): Particle[] {
+  return Array.from({ length: count }, (_, i) => {
+    const [color, glow] = COLORS[i % COLORS.length];
+    const duration = 6 + Math.random() * 10;
+    return {
+      size: 6 + Math.random() * 18,
+      left: Math.random() * 100,
+      bottom: Math.random() * 30,
+      duration,
+      // Negative delay = start mid-animation, so particles are already in motion on load
+      delay: -(Math.random() * duration),
+      drift: (Math.random() - 0.5) * 80,
+      color, glow,
+    };
+  });
+}
+
+function HeatParticles() {
+  const [particles, setParticles] = useState<Particle[]>([]);
+  useEffect(() => { setParticles(makeParticles(28)); }, []);
+
+  return (
+    <>
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="heat-particle"
+          style={{
+            width: p.size,
+            height: p.size,
+            left: `${p.left}%`,
+            bottom: `${p.bottom}%`,
+            background: p.color,
+            boxShadow: `0 0 ${p.size * 1.8}px ${p.size * 0.9}px ${p.glow}`,
+            animationDuration: `${p.duration}s`,
+            animationDelay: `${p.delay}s`,
+            ['--drift' as string]: `${p.drift}px`,
+          } as React.CSSProperties}
+        />
+      ))}
+    </>
+  );
+}
+
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const input1Ref = useRef<HTMLDivElement>(null);
@@ -138,9 +195,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center min-h-screen px-4 sm:px-8 md:px-16 lg:px-32 xl:px-0 max-w-5xl mx-auto relative bg-white text-[#2a2a2a]">
-      <section className="w-full flex flex-col items-center justify-center min-h-screen relative overflow-hidden" style={{ padding: '10vw 2vw' }}>
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <Meteors number={32} />
+      <section className="w-full flex flex-col items-center justify-center min-h-screen relative" style={{ padding: '10vw 2vw' }}>
+        <div className="absolute z-0 pointer-events-none overflow-hidden" style={{ width: '100vw', left: '50%', transform: 'translateX(-50%)', top: 0, bottom: 0 }}>
+          <HeatParticles />
         </div>
         <motion.div
           className="wordmark flex items-center justify-center mt-0 relative z-10"
@@ -411,6 +468,19 @@ export default function Home() {
           80% { transform: scale(1, 1.02) rotate(-2deg); filter: brightness(1.05); }
           90% { transform: scale(1.04, 0.98) rotate(2deg); filter: brightness(1.15); }
           100% { transform: scale(1) rotate(-2deg); filter: brightness(1.05); }
+        }
+        @keyframes heat-rise {
+          0%   { transform: translateY(0) translateX(0) scale(1);   opacity: 0; }
+          10%  { opacity: 1; }
+          50%  { transform: translateY(-45vh) translateX(var(--drift)) scale(1.3); opacity: 0.7; }
+          90%  { opacity: 0.2; }
+          100% { transform: translateY(-95vh) translateX(calc(var(--drift) * 1.6)) scale(0.6); opacity: 0; }
+        }
+        .heat-particle {
+          position: absolute;
+          border-radius: 50%;
+          animation: heat-rise linear infinite;
+          pointer-events: none;
         }
         @media (max-width: 900px) {
           .animated-beam-responsive {
