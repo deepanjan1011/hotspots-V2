@@ -40,22 +40,28 @@ def generate_heat_plan(data: dict):
     )
 
     prompt = f"""
-    You are a Heat Resilience Expert. Analyze the following data point in {data.get('city', 'the city')}:
-    - Vulnerability Score: {data.get('vulnerability', 'N/A')}
-    - Building Density: {data.get('bldDensity', 'N/A')}
-    - NDVI (Green Cover): {data.get('ndvi', 'N/A')}
+    You are an elite urban climate adaptation specialist generating a Heat Resilience Plan for a specific location in {data.get('city', 'the city')}.
+    
+    ENVIRONMENTAL METRICS AT THIS LOCATION:
+    - Heat Vulnerability (0-1): {data.get('vulnerability', 'N/A')}
+    - Building Density (0-1): {data.get('bldDensity', 'N/A')}
+    - NDVI (Green Cover) (-1 to 1): {data.get('ndvi', 'N/A')}
+    - Predicted AQI: {data.get('aqi', 'N/A')}
+    - Combined Health Risk: {data.get('health_risk', 'N/A')}
 
-    Provide a concise, numbered list of 3 actionable mitigation strategies for this specific location.
-    Make it sound professional but urgent.
-    IMPORTANT: Do NOT use markdown formatting (like **bold** or *italics*). Use plain text only.
-    Use clear numbering like "1. Strategy Name: Description".
+    CRITICAL INSTRUCTIONS:
+    1. Provide a concise, numbered list of 3 highly actionable mitigation strategies tailored SPECIFICALLY to these exact metrics in {data.get('city', 'this region')}.
+    2. DO NOT provide generic answers. For example, if suggesting plants, name specific native species that survive the given AQI and Heat Vulnerability. If highlighting architectural changes, mention strategies specific to the given building density.
+    3. Make it sound professional but urgent.
+    4. IMPORTANT: Do NOT use markdown formatting (like **bold** or *italics*). Use plain text only.
+    5. Use clear numbering like "1. Strategy Name: Description".
     """
 
     try:
         response = client.chat.completions.create(
             model=OPENAI_DEPLOYMENT_NAME,
             messages=[
-                {"role": "system", "content": "You are a helpful expert assistant."},
+                {"role": "system", "content": "You are a specialized urban climate adaptation expert."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=300
@@ -110,13 +116,18 @@ def chat_with_expert(message: str, history: list, context_data: dict = None):
     )
 
     # Build system context
-    system_prompt = f"""You are an urban planning expert specializing in Heat Resilience for {context_data.get('city', 'the city') if context_data else 'cities'}.
-    User is asking about a location with:
-    - Vulnerability: {context_data.get('vulnerability', 'N/A') if context_data else 'Unknown'}
-    - Building Density: {context_data.get('bldDensity', 'N/A') if context_data else 'Unknown'}
-    - NDVI: {context_data.get('ndvi', 'N/A') if context_data else 'Unknown'}
+    system_prompt = f"""You are an elite urban climate adaptation specialist and botanist consulting for {context_data.get('city', 'the city') if context_data else 'cities'}.
+    User is asking about a location with the following environmental metrics:
+    - Heat Vulnerability (0-1): {context_data.get('vulnerability', 'Unknown') if context_data else 'Unknown'}
+    - Building Density (0-1): {context_data.get('bldDensity', 'Unknown') if context_data else 'Unknown'}
+    - NDVI (Green Cover) (-1 to 1): {context_data.get('ndvi', 'Unknown') if context_data else 'Unknown'}
+    - Predicted AQI: {context_data.get('aqi', 'Unknown') if context_data else 'Unknown'}
+    - Combined Health Risk (0-1): {context_data.get('health_risk', 'Unknown') if context_data else 'Unknown'}
     
-    Answer their questions concisely and professionally. Keep answers under 3 sentences if possible.
+    CRITICAL INSTRUCTIONS:
+    1. DO NOT GIVE GENERIC ADVICE. You MUST tailor your recommendations specifically to the metrics provided above.
+    2. If the user asks for plants, suggest specific species that are native or highly adapted to the climate of {context_data.get('city', 'the region') if context_data else 'the region'} and capable of surviving the specific AQI and Heat Vulnerability levels provided. Do not just say "plant a tree".
+    3. Keep answers concise, actionable, and highly professional. Limit to 3-4 sentences maximum.
     """
 
     messages = [{"role": "system", "content": system_prompt}]

@@ -83,6 +83,7 @@ export default function Visualize() {
   const [shakePanel, setShakePanel] = useState(false);
   const [showGreenRx, setShowGreenRx] = useState(false);
   const [calculatingRx, setCalculatingRx] = useState(false);
+  const [cityName, setCityName] = useState<string>('Selected Location');
 
   const [mounted, setMounted] = useState(false);
   const [webglError, setWebglError] = useState<string | null>(null);
@@ -147,6 +148,9 @@ export default function Visualize() {
     fetch('/api/config')
       .then(res => res.json())
       .then(config => {
+        if (config.city_name) {
+          setCityName(config.city_name);
+        }
         if (config.initial_view) {
           setViewState(prev => ({
             ...prev,
@@ -298,7 +302,10 @@ export default function Visualize() {
         body: JSON.stringify({
           vulnerability: info.vulnerability,
           bldDensity: info.bldDensity,
-          ndvi: info.ndvi
+          ndvi: info.ndvi,
+          city: cityName,
+          aqi: info.aqi,
+          health_risk: info.health_risk
         })
       });
       const data = await res.json();
@@ -321,6 +328,9 @@ export default function Visualize() {
     setLoadingChat(true);
 
     try {
+      // Determine city name from the search options if available, otherwise just use a generic 'Current City'
+      // We know there's a config endpoint that returns 'city_name', but it's not stored in state directly.
+      // We will add it to state or just fetch it. For now, assuming standard city or what's in searchOptions[0].
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -328,11 +338,20 @@ export default function Visualize() {
           message: newMessage.content,
           history: chatHistory,
           context: tooltip ? {
-            city: 'Selected Location',
+            city: cityName,
             vulnerability: tooltip.vulnerability,
             bldDensity: tooltip.bldDensity,
-            ndvi: tooltip.ndvi
-          } : null
+            ndvi: tooltip.ndvi,
+            aqi: tooltip.aqi,
+            health_risk: tooltip.health_risk
+          } : {
+            city: cityName,
+            vulnerability: 'Unknown',
+            bldDensity: 'Unknown',
+            ndvi: 'Unknown',
+            aqi: 'Unknown',
+            health_risk: 'Unknown'
+          }
         })
       });
       const data = await res.json();

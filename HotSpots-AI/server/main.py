@@ -176,6 +176,8 @@ class PlanRequest(BaseModel):
     bldDensity: float
     ndvi: float
     city: str = CITY_NAME
+    aqi: float = 0.0
+    health_risk: float = 0.0
 
 @app.post("/api/generate-plan")
 async def api_generate_plan(request: PlanRequest):
