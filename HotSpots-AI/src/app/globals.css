@@ -189,16 +189,8 @@
   }
 }
 
-@font-face {
-  font-family: 'Neue';
-  src: url('../../public/fonts/NeueHaasDisplayMediu.woff') format('woff');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 .title {
-  font-family: 'Neue';
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   color: #181818;
   font-size: 5rem;
   font-weight: 500;

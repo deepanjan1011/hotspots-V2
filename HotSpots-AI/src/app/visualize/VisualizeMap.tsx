@@ -489,7 +489,7 @@ export default function Visualize() {
       overflow: 'hidden',
       width: '100vw',
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif',
       position: 'relative',
       margin: 0,
       padding: 0,
@@ -927,7 +927,7 @@ export default function Visualize() {
                   flexDirection: 'column',
                   border: '1px solid rgba(255,255,255,0.1)',
                   backdropFilter: 'blur(16px)',
-                  fontFamily: 'NeueHaasDisplay, Neue, sans-serif',
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif',
                   overflow: 'hidden', // Main container doesn't scroll, content does
                   transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
@@ -1249,13 +1249,6 @@ export default function Visualize() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
-        }
-        @font-face {
-          font-family: 'NeueHaasDisplay';
-          src: url('/fonts/NeueHaasDisplayMediu.woff') format('woff');
-          font-weight: normal;
-          font-style: normal;
-          font-display: swap;
         }
         @keyframes sloganPulse {
           0%, 100% { opacity: 0.8; transform: scale(1); }

@@ -8,6 +8,7 @@ import numpy as np
 load_dotenv() # Load environment variables from .env file
 
 from pydantic import BaseModel
+from pydantic import Field
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -195,7 +196,7 @@ from typing import List, Dict, Any, Optional
 
 class ChatRequest(BaseModel):
     message: str
-    history: List[Dict[str, str]] = [] # [{"role": "user", "content": "..."}]
+    history: List[Dict[str, str]] = Field(default_factory=list) # [{"role": "user", "content": "..."}]
     context: Optional[Dict[str, Any]] = None
 
 @app.post("/api/chat")

@@ -13,23 +13,34 @@ OPENAI_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
 SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
 SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
 
+def _to_float(value, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 def generate_heat_plan(data: dict):
     """
     Generates a personalized heat resilience plan using Azure OpenAI.
     """
     if not OPENAI_API_KEY or not OPENAI_ENDPOINT:
         # Mock response for demo purposes (when Azure keys are missing)
+        bld = _to_float(data.get("bldDensity"), 0.0)
+        ndvi = _to_float(data.get("ndvi"), 0.0)
+        vuln = _to_float(data.get("vulnerability"), 0.0)
         return {
             "plan": f"""**Heat Resilience Plan for {data.get('city', 'Selected Location')}**
 
 1. **Green Roof Implementation**:
-   - The building density ({data.get('bldDensity', '0'):.2f}) indicates high heat retention. Install modular green roofs to reduce surface temperature by up to 15°C.
+   - The building density ({bld:.2f}) indicates high heat retention. Install modular green roofs to reduce surface temperature by up to 15°C.
 
 2. **Perpendicular Shading**:
-   - With an NDVI of {data.get('ndvi', '0'):.2f}, vegetation is sparse. Construct perpendicular shading structures along walkways to maximize pedestrian comfort.
+   - With an NDVI of {ndvi:.2f}, vegetation is sparse. Construct perpendicular shading structures along walkways to maximize pedestrian comfort.
 
 3. **Cool Pavement Materials**:
-   - Vulnerability score is {data.get('vulnerability', '0'):.2f} (High). Resurface parking areas with high-albedo cool pavement to reflect solar radiation.""",
+   - Vulnerability score is {vuln:.2f} (High). Resurface parking areas with high-albedo cool pavement to reflect solar radiation.""",
             "is_mock": True
         }
 

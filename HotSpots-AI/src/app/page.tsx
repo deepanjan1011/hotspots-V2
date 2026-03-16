@@ -232,8 +232,8 @@ export default function Home() {
               marginRight: 8
             }}
           />
-          <span className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'NeueHaasDisplay, Neue, sans-serif' }}>HeatShield</span>
-          <span className="text-2xl font-semibold text-[#888]" style={{ fontFamily: 'NeueHaasDisplay, Neue, sans-serif', marginBottom: -3 }}>.ai</span>
+          <span className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif' }}>HeatShield</span>
+          <span className="text-2xl font-semibold text-[#888]" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif', marginBottom: -3 }}>.ai</span>
         </motion.div>
         <motion.h1
           className="slogan text-6xl sm:text-7xl md:text-8xl font-bold text-center mb-6 mt-3 leading-tight max-w-2xl mx-auto"
@@ -449,13 +449,6 @@ export default function Home() {
       </section>
 
       <style jsx global>{`
-        @font-face {
-          font-family: 'NeueHaasDisplay';
-          src: url('/fonts/NeueHaasDisplayMediu.woff') format('woff');
-          font-weight: normal;
-          font-style: normal;
-          font-display: swap;
-        }
         @keyframes fire-flicker {
           0% { transform: scale(1) rotate(-2deg); filter: brightness(1.05); }
           10% { transform: scale(1.04, 0.98) rotate(2deg); filter: brightness(1.15); }
