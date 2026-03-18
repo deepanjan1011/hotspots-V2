@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from azure_services import generate_heat_plan, text_to_speech, chat_with_expert
 
 from config import CITY_NAME, BBOX, LOCATIONS
@@ -49,7 +49,8 @@ else:
 
 @app.get("/api/config")
 async def get_config():
-    return {
+    return JSONResponse(
+        {
         "city_name": CITY_NAME,
         "bbox": BBOX,
         "initial_view": {
@@ -58,7 +59,9 @@ async def get_config():
             "zoom": 12
         },
         "locations": LOCATIONS
-    }
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 @app.get("/api/health")
 async def health_check():
@@ -74,8 +77,8 @@ async def get_vulnerability_points():
     with open(file_path, "r") as f:
         data = json.load(f)
     
-    # Inject mock data for "Option 3" (AQI, Population, Health Risk)
-    # NOTE: "Vulnerability" is NOT modified here. It remains pure from the GeoJSON.
+    # Inject derived fields (AQI + health risk).
+    # NOTE: If a trained model is present, it can overwrite GeoJSON vulnerability.
     import random
     random.seed(42) # Ensure consistency
 
@@ -93,7 +96,7 @@ async def get_vulnerability_points():
             import requests
             # Fetch Air Pollution Forecast (5s timeout for Vercel cold starts)
             response = requests.get(
-                f"http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat={center_lat}&lon={center_lon}&appid={owm_key}",
+                f"https://api.openweathermap.org/data/2.5/air_pollution/forecast?lat={center_lat}&lon={center_lon}&appid={owm_key}",
                 timeout=5
             )
             print(f"[AQI] OWM API response status: {response.status_code}")
@@ -129,17 +132,20 @@ async def get_vulnerability_points():
         print(f"[AQI] Using fallback AQI: {city_aqi_prediction}")
 
     # [OPTIMIZATION] Prepare batch data for ML model
-    ms_inputs = [] 
+    ms_inputs = []
+    rf_feature_indices = []
     
     for feature in data['features']:
         props = feature['properties']
-        bld = props.get('bld_density', 0)
+        # GeoJSON uses camelCase keys (bldDensity). Keep a fallback for older datasets.
+        bld = props.get('bldDensity', props.get('bld_density', 0))
         ndvi = props.get('ndvi', 0)
         temp = props.get('temp', 30)
         
         # Prepare input for batch prediction
         if rf_model:
             ms_inputs.append([temp, ndvi, bld])
+            rf_feature_indices.append(len(rf_feature_indices))
 
         # Predicted AQI Calculation:
         # We start with the city-wide prediction and apply local variance based on environment.
@@ -155,6 +161,12 @@ async def get_vulnerability_points():
         props['aqi'] = max(20, min(500, int(final_aqi)))
 
         # NOTE: Population data generator has been permanently removed
+        #
+        # Always compute a health risk value so prod (no model.pkl) matches local behavior.
+        # If the model exists, this value may be overwritten below using the predicted vulnerability.
+        vuln_for_risk = props.get('vulnerability', 0.0)
+        aqi_norm = min(props['aqi'] / 500.0, 1.0)
+        props['health_risk'] = max(0.0, min(1.0, (float(vuln_for_risk) * 0.5) + (aqi_norm * 0.5)))
 
     # [OPTIMIZATION] Run Batch Prediction (1 call instead of 2000)
     if rf_model and len(ms_inputs) > 0:
@@ -175,7 +187,7 @@ async def get_vulnerability_points():
             # Normalize just to be perfectly safe
             data['features'][i]['properties']['health_risk'] = max(0.0, min(1.0, final_risk))
 
-    return data
+    return JSONResponse(data, headers={"Cache-Control": "no-store"})
 
 
 
