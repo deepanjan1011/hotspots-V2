@@ -27,6 +27,8 @@
 # python
 __pycache__/
 *.pyc
+venv/
+server/venv/
 
 # local tooling
 .compile_cache/

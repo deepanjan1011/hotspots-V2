@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   async rewrites() {
+    // On Vercel, API routing is handled by vercel.json → Python serverless function.
+    // Only proxy in local development where Python runs on localhost:8000.
+    if (process.env.VERCEL) return [];
     return [
       {
         source: '/api/:path*',

@@ -86,12 +86,17 @@ async def get_vulnerability_points():
     # Try fetching real AQI prediction
     city_aqi_prediction = None
     owm_key = os.getenv("OPENWEATHERMAP_API_KEY")
+    print(f"[AQI] OWM API Key present: {bool(owm_key)}")
     
     if owm_key:
         try:
             import requests
-            # Fetch Air Pollution Forecast
-            response = requests.get(f"http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat={center_lat}&lon={center_lon}&appid={owm_key}")
+            # Fetch Air Pollution Forecast (5s timeout for Vercel cold starts)
+            response = requests.get(
+                f"http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat={center_lat}&lon={center_lon}&appid={owm_key}",
+                timeout=5
+            )
+            print(f"[AQI] OWM API response status: {response.status_code}")
             if response.status_code == 200:
                 forecast_data = response.json()
                 
@@ -112,12 +117,16 @@ async def get_vulnerability_points():
                 
                 if count > 0:
                     city_aqi_prediction = aqi_sum / count
+                    print(f"[AQI] Calculated city AQI prediction: {city_aqi_prediction}")
+            else:
+                print(f"[AQI] OWM API returned non-200: {response.text[:200]}")
         except Exception as e:
-            print(f"Error fetching OWM AQI: {e}")
+            print(f"[AQI] Error fetching OWM AQI: {e}")
             
     # Fallback if API fails or no key
     if city_aqi_prediction is None:
         city_aqi_prediction = 150 # Default moderate/unhealthy
+        print(f"[AQI] Using fallback AQI: {city_aqi_prediction}")
 
     # [OPTIMIZATION] Prepare batch data for ML model
     ms_inputs = [] 
