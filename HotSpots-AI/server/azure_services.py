@@ -1,8 +1,11 @@
 
 import os
 import openai
-import azure.cognitiveservices.speech as speechsdk
 from fastapi import HTTPException
+
+# NOTE: azure.cognitiveservices.speech is imported lazily inside text_to_speech()
+# because it uses native C++ binaries unavailable on Vercel's serverless environment.
+# Importing at module level would crash ALL endpoints, not just speak-plan.
 
 # Azure OpenAI Configuration
 OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
@@ -87,17 +90,21 @@ def text_to_speech(text: str):
     Converts text to speech using Azure AI Speech.
     Returns the audio data as a stream or saves to a temp file.
     """
+    # Lazy import: this SDK uses native C++ binaries unavailable on Vercel
+    try:
+        import azure.cognitiveservices.speech as speechsdk
+    except ImportError:
+        raise HTTPException(
+            status_code=501,
+            detail="Text-to-speech is not available in this deployment (Azure Speech SDK requires native binaries)."
+        )
+
     if not SPEECH_KEY or not SPEECH_REGION:
         raise HTTPException(status_code=500, detail="Azure Speech keys are missing.")
 
     speech_config = speechsdk.SpeechConfig(subscription=SPEECH_KEY, region=SPEECH_REGION)
     speech_config.speech_synthesis_voice_name = 'en-US-AvaMultilingualNeural' # Modern AI Voice
 
-    # We want to return the audio bytes, not play it on the server speakers
-    # So we don't set an audio output config (defaults to memory/stream mostly, but let's be explicit)
-    # pull_stream = speechsdk.audio.PullAudioOutputStream()
-    # audio_config = speechsdk.audio.AudioConfig(stream=pull_stream)
-    
     # Simpler approach for web API: Synthesis to memory
     synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
 
