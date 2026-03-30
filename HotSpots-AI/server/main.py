@@ -1,6 +1,7 @@
 # HotSpots AI Backend
 import os
 import json
+import random
 from dotenv import load_dotenv
 import joblib
 import numpy as np
@@ -19,7 +20,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, specify the exact origin
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -79,7 +80,6 @@ async def get_vulnerability_points():
     
     # Inject derived fields (AQI + health risk).
     # NOTE: If a trained model is present, it can overwrite GeoJSON vulnerability.
-    import random
     random.seed(42) # Ensure consistency
 
     # Define center coordinates (Chennai in this case)

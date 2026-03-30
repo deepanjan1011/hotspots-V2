@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 const Globe = dynamic(() => import('@/components/magicui/globe').then(m => m.Globe), { ssr: false });
 import Link from 'next/link';
-// import { RetroGrid } from '@/components/magicui/retro-grid';
+
 import { TextReveal } from '@/components/magicui/text-reveal';
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
@@ -163,36 +163,6 @@ function HeatParticles() {
 }
 
 export default function Home() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const input1Ref = useRef<HTMLDivElement>(null);
-  const input2Ref = useRef<HTMLDivElement>(null);
-  const input3Ref = useRef<HTMLDivElement>(null);
-  const chipRef = useRef<HTMLDivElement>(null);
-  const geminiRef = useRef<HTMLDivElement>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
-  const geeRef = useRef<HTMLDivElement>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showTunedTooltip, setShowTunedTooltip] = useState(false);
-  const tunedTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [showGeeTooltip, setShowGeeTooltip] = useState(false);
-  const geeTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  function handleTunedEnter() {
-    if (tunedTimeout.current) clearTimeout(tunedTimeout.current);
-    setShowTunedTooltip(true);
-  }
-  function handleTunedLeave() {
-    tunedTimeout.current = setTimeout(() => setShowTunedTooltip(false), TOOLTIP_HIDE_DELAY);
-  }
-
-  function handleGeeEnter() {
-    if (geeTimeout.current) clearTimeout(geeTimeout.current);
-    setShowGeeTooltip(true);
-  }
-  function handleGeeLeave() {
-    geeTimeout.current = setTimeout(() => setShowGeeTooltip(false), TOOLTIP_HIDE_DELAY);
-  }
-
   return (
     <div className="flex flex-col items-center min-h-screen px-4 sm:px-8 md:px-16 lg:px-32 xl:px-0 max-w-5xl mx-auto relative bg-white text-[#2a2a2a]">
       <section className="w-full flex flex-col items-center justify-center min-h-screen relative" style={{ padding: '10vw 2vw' }}>

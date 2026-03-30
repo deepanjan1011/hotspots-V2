@@ -1,7 +1,7 @@
 import os, json
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-IN_GEOJSON  = os.path.join(BASE, 'public', 'vulnerability_points.geojson')
+IN_GEOJSON  = os.path.join(BASE, 'server', 'data', 'vulnerability_points.geojson')
 OUT_GEOJSON = os.path.join(BASE, 'public', 'tree_priority.geojson')
 
 WEIGHTS_FILE = os.path.join(BASE, 'server', 'weights.json')

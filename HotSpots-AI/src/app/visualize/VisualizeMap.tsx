@@ -81,8 +81,6 @@ export default function Visualize() {
   const [chatInput, setChatInput] = useState('');
   const [loadingChat, setLoadingChat] = useState(false);
   const [shakePanel, setShakePanel] = useState(false);
-  const [showGreenRx, setShowGreenRx] = useState(false);
-  const [calculatingRx, setCalculatingRx] = useState(false);
   const [cityName, setCityName] = useState<string>('Selected Location');
 
   const [mounted, setMounted] = useState(false);
