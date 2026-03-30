@@ -1,11 +1,14 @@
 # HotSpots AI Backend
 import os
 import json
+from pathlib import Path
 from dotenv import load_dotenv
 import joblib
 import numpy as np
 
-load_dotenv() # Load environment variables from .env file
+SERVER_DIR = Path(__file__).resolve().parent
+load_dotenv(SERVER_DIR.parent / ".env")
+load_dotenv(SERVER_DIR / ".env")
 
 from pydantic import BaseModel
 from pydantic import Field

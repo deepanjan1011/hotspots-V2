@@ -117,6 +117,10 @@ def text_to_speech(text: str):
         print(f"Speech synthesis canceled: {cancellation_details.reason}")
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             print(f"Error details: {cancellation_details.error_details}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Speech synthesis failed: {cancellation_details.error_details}",
+            )
         raise HTTPException(status_code=500, detail="Speech synthesis failed.")
 
 def chat_with_expert(message: str, history: list, context_data: dict = None):

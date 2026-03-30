@@ -400,7 +400,18 @@ export default function Visualize() {
         body: JSON.stringify({ text: aiPlan.plan.replace(/[#*-]/g, '') }) // Clean markdown for speech
       });
 
-      if (!res.ok) throw new Error("Audio generation failed");
+      if (!res.ok) {
+        let detail = 'Audio generation failed';
+        try {
+          const errorData = await res.json();
+          if (typeof errorData?.detail === 'string' && errorData.detail.trim()) {
+            detail = errorData.detail;
+          }
+        } catch {
+          // Keep the fallback message when the backend does not return JSON.
+        }
+        throw new Error(detail);
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -416,7 +427,8 @@ export default function Visualize() {
       audio.play();
     } catch (e) {
       console.error(e);
-      alert("Could not generate audio (Check Azure keys)");
+      const message = e instanceof Error ? e.message : 'Could not generate audio';
+      alert(message);
       setPlayingAudio(false);
     }
   };
