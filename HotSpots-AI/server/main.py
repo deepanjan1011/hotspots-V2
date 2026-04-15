@@ -127,7 +127,8 @@ async def get_vulnerability_points():
     
     for feature in data['features']:
         props = feature['properties']
-        bld = props.get('bld_density', 0)
+        # GeoJSON generators store this field as `bldDensity`.
+        bld = props.get('bldDensity', props.get('bld_density', 0))
         ndvi = props.get('ndvi', 0)
         temp = props.get('temp', 30)
         

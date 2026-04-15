@@ -1,16 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "HeatShield: AI-Powered Urban Heat Monitoring",
@@ -27,16 +16,24 @@ export default function RootLayout({
       <head>
         <meta property="og:title" content="HeatShield AI" />
         <meta property="og:description" content="Explore Chennai's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
-        <meta property="og:image" content="/ogimage.png" />
+        <meta property="og:image" content="/HeatShieldai.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://heatshield-ai.vercel.app/" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="HeatShield AI" />
         <meta name="twitter:description" content="Explore Chennai's heat vulnerability hotspots through interactive 3D mapping and data visualization!" />
-        <meta name="twitter:image" content="/ogimage.png" />
+        <meta name="twitter:image" content="/HeatShieldai.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
+        style={
+          {
+            "--font-geist-sans":
+              'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            "--font-geist-mono":
+              '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+          } as React.CSSProperties
+        }
       >
         {children}
       </body>
