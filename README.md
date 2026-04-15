@@ -31,9 +31,28 @@
     npm run dev
     ```
 
-3.  **Run Backend** — use **one** Python environment under `HotSpots-AI/server` (ignore any other `venv` folders elsewhere):
+3.  **Run Backend (Python)**
 
-    **First-time setup** (creates `HotSpots-AI/server/.venv` and installs deps):
+    **You only need one virtual environment.** After cloning, create it **once** here:
+
+    `HotSpots-AI/server/.venv`
+
+    The repo does **not** ship a venv (it is gitignored). You may see several ignore rules such as `.venv/`, `venv/`, and `server/venv/` so that **whatever folder name someone uses locally** never gets committed. That is **not** an invitation to create multiple environments—pick **one** location: **`server/.venv`**, as below.
+
+    ---
+
+    **Easiest path (after first-time install):** from `HotSpots-AI`, start the API in a single step:
+
+    ```bash
+    npm run backend
+    ```
+
+    That runs `HotSpots-AI/server/run-dev.sh`, which starts Uvicorn on port **8000** and uses `server/.venv` if it exists (otherwise `server/venv`, then `python3`). You do **not** have to activate the venv first when you use this.
+
+    ---
+
+    **First-time setup** (one time per machine):
+
     ```bash
     cd HotSpots-AI/server
     python3 -m venv .venv
@@ -42,19 +61,14 @@
     python -m pip install -r requirements.txt
     ```
 
-    **Start the API** — either:
+    Then either use **`npm run backend`** from `HotSpots-AI`, or run Uvicorn yourself:
+
     ```bash
     cd HotSpots-AI/server
     source .venv/bin/activate   # Fish: source .venv/bin/activate.fish
     python -m uvicorn main:app --reload --port 8000
     ```
-    or from `HotSpots-AI` after the venv exists and dependencies are installed:
-    ```bash
-    npm run backend
-    ```
 
-    The script `server/run-dev.sh` uses `server/.venv` if present, else `server/venv`, else `python3`.
-
-    **Note:** `HotSpots-AI/requirements.txt` is a slim set for Vercel. For local backend development, use **`HotSpots-AI/server/requirements.txt`** (as above).
+    **Dependencies:** use **`HotSpots-AI/server/requirements.txt`** for local development. The file **`HotSpots-AI/requirements.txt`** is a smaller set used for Vercel deployment limits, not for full local setup.
 
 Visit `http://localhost:3000` to see the application.

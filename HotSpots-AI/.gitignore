@@ -24,7 +24,8 @@
 .DS_Store
 *.pem
 
-# python
+# python — clone the repo once; create a single local venv at server/.venv (see README).
+# Multiple patterns = any accidental local env folder name stays out of git, not "create two venvs".
 __pycache__/
 *.pyc
 venv/
