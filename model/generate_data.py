@@ -2,35 +2,32 @@
 import json
 import os
 import random
+from pathlib import Path
 import rasterio
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point
 
-import sys
+from project_paths import APP_ROOT, MODEL_DIR, SERVER_DATA_DIR, add_app_to_pythonpath
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
+add_app_to_pythonpath()
 
-# Add project root to sys.path to allow importing server.config
-sys.path.append(PROJECT_ROOT)
-
-from server.config import LST_TIF, NDVI_TIF, BUILDING_SHP, DATA_DIR, BBOX
+from server.config import LST_TIF, NDVI_TIF, BUILDING_SHP, BBOX
 
 # Resolve paths relative to PROJECT_ROOT if they are relative
 def resolve_path(path):
-    if os.path.isabs(path):
-        return path
-    return os.path.join(PROJECT_ROOT, path)
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return APP_ROOT / candidate
 
 LST_TIF_PATH = resolve_path(LST_TIF)
 NDVI_TIF_PATH = resolve_path(NDVI_TIF)
 BUILD_SHP_PATH = resolve_path(BUILDING_SHP)
-OUTPUT_DIR = resolve_path(DATA_DIR)
+OUTPUT_DIR = SERVER_DATA_DIR
 
-ARTIFACTS_FILE = os.path.join(BASE_DIR, "model_artifacts.json")
-OUTPUT_GEOJSON = os.path.join(OUTPUT_DIR, 'vulnerability_points.geojson')
+ARTIFACTS_FILE = MODEL_DIR / "model_artifacts.json"
+OUTPUT_GEOJSON = OUTPUT_DIR / 'vulnerability_points.geojson'
 
 # Load weights
 if not os.path.exists(ARTIFACTS_FILE):

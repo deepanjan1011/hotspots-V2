@@ -1,12 +1,13 @@
 import osmnx as ox
 import geopandas as gpd
-import sys
 import os
+from pathlib import Path
 
-# Add project root to sys.path to allow importing server.config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from project_paths import SERVER_DATA_DIR, add_app_to_pythonpath
 
-from server.config import BBOX, CITY_NAME, DATA_DIR
+add_app_to_pythonpath()
+
+from server.config import BBOX, CITY_NAME
 
 def download_buildings():
     print(f"Downloading building footprints for {CITY_NAME}...")
@@ -48,21 +49,12 @@ def download_buildings():
     buildings = buildings[cols]
 
     # Define output path
-    output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Project Root
-    save_path = os.path.join(DATA_DIR, f"{CITY_NAME.lower()}_buildings.shp")
-    
-    # Resolve absolute path for save
-    if not os.path.isabs(save_path):
-         save_path = os.path.join(output_dir, save_path)
-
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    save_path = Path(SERVER_DATA_DIR) / f"{CITY_NAME.lower()}_buildings.shp"
+    os.makedirs(save_path.parent, exist_ok=True)
     
     print(f"Saving {len(buildings)} buildings to {save_path}...")
     buildings.to_file(save_path)
     print("Done.")
-        
-    print("\nIMPORTANT: Update your server/config.py with:")
-    print(f'BUILDING_SHP = "{save_path}"')
 
 if __name__ == "__main__":
     download_buildings()

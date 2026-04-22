@@ -1,22 +1,18 @@
 flowchart TD
     User[User Browser]
     Frontend[Vercel Next.js Frontend]
-    Api[Vercel Python Entry<br/>api/index.py]
-    Backend[FastAPI Backend<br/>server/main.py]
+    Backend[Azure Web App<br/>FastAPI Backend]
     Data[(GeoJSON / Model / Raster Data)]
     AzureOpenAI[Azure OpenAI]
     AzureSpeech[Azure Speech Service]
     Mapbox[Mapbox]
+    OpenWeather[OpenWeatherMap AQI]
 
     User --> Frontend
-    Frontend -->|/api/config| Api
-    Frontend -->|/api/vulnerability-points| Api
-    Frontend -->|/api/generate-plan| Api
-    Frontend -->|/api/chat| Api
-    Frontend -->|/api/speak-plan| Api
+    Frontend -->|NEXT_PUBLIC_API_URL| Backend
     Frontend -->|tiles + styles| Mapbox
 
-    Api --> Backend
     Backend --> Data
     Backend -->|generate plan / chat| AzureOpenAI
     Backend -->|text-to-speech| AzureSpeech
+    Backend -->|AQI forecast| OpenWeather

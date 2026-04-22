@@ -13,8 +13,8 @@
 
 ## Tech Stack
 -   **Frontend:** Next.js 16, Deck.gl, Mapbox
--   **Backend:** Python (FastAPI), Serverless Functions
--   **Deployment:** Vercel
+-   **Backend:** Python (FastAPI), Azure OpenAI, Azure Speech
+-   **Deployment:** Vercel (frontend) + Azure Web App (backend)
 
 ## Getting Started
 
@@ -30,6 +30,9 @@
     npm install
     npm run dev
     ```
+
+    For local development, the Next.js app proxies `/api/*` to the local FastAPI
+    server on port `8000`.
 
 3.  **Run Backend (Python)**
 
@@ -69,6 +72,12 @@
     python -m uvicorn main:app --reload --port 8000
     ```
 
-    **Dependencies:** use **`HotSpots-AI/server/requirements.txt`** for local development. The file **`HotSpots-AI/requirements.txt`** is a smaller set used for Vercel deployment limits, not for full local setup.
+    **Dependencies:** use **`HotSpots-AI/server/requirements.txt`** for backend development and Azure deployment.
+
+## Deployment Notes
+
+-   **Frontend:** deploy `HotSpots-AI` to Vercel.
+-   **Backend:** deploy `HotSpots-AI/server` to Azure Web App.
+-   **Frontend env:** set `NEXT_PUBLIC_API_URL` to your Azure backend base URL, for example `https://your-backend.azurewebsites.net`.
 
 Visit `http://localhost:3000` to see the application.

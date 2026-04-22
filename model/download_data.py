@@ -1,10 +1,11 @@
 import ee
 import geemap
-import sys
 import os
+from pathlib import Path
 
-# Add project root to sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from project_paths import SERVER_DATA_DIR, add_app_to_pythonpath
+
+add_app_to_pythonpath()
 
 from server.config import BBOX, CITY_NAME
 
@@ -28,7 +29,7 @@ def authenticate_and_initialize():
             else:
                 raise e2
 
-def download_satellite_data(output_dir="server/data"):
+def download_satellite_data(output_dir=SERVER_DATA_DIR):
     # Define ROI from config BBOX (min_lon, min_lat, max_lon, max_lat)
     roi = ee.Geometry.Rectangle([BBOX[0], BBOX[1], BBOX[2], BBOX[3]])
 
@@ -57,20 +58,21 @@ def download_satellite_data(output_dir="server/data"):
     ndvi = landsat.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
 
     # Export
+    output_dir = Path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     
-    lst_out = os.path.join(output_dir, f"{CITY_NAME.lower()}_lst.tif")
-    ndvi_out = os.path.join(output_dir, f"{CITY_NAME.lower()}_ndvi.tif")
+    lst_out = output_dir / f"{CITY_NAME.lower()}_lst.tif"
+    ndvi_out = output_dir / f"{CITY_NAME.lower()}_ndvi.tif"
 
     print(f"Exporting LST to {lst_out}...")
-    geemap.ee_export_image(lst_celsius, filename=lst_out, scale=30, region=roi, file_per_band=False)
+    geemap.ee_export_image(lst_celsius, filename=str(lst_out), scale=30, region=roi, file_per_band=False)
 
     print(f"Exporting NDVI to {ndvi_out}...")
-    geemap.ee_export_image(ndvi, filename=ndvi_out, scale=30, region=roi, file_per_band=False)
+    geemap.ee_export_image(ndvi, filename=str(ndvi_out), scale=30, region=roi, file_per_band=False)
     
     print("Download complete.")
     
-    return lst_out, ndvi_out
+    return str(lst_out), str(ndvi_out)
 
 if __name__ == "__main__":
     authenticate_and_initialize()

@@ -2,7 +2,7 @@ fastapi
 uvicorn
 rasterio
 geopandas
-scikit-learn
+scikit-learn==1.6.1
 shapely
 numpy
 earthengine-api

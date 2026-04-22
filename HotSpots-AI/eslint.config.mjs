@@ -3,7 +3,16 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 const config = [
   // Extra ignores on top of Next.js defaults.
   {
-    ignores: ['**/node_modules/**', '**/.next/**', '**/out/**', '**/build/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/out/**',
+      '**/build/**',
+      '**/.venv/**',
+      '**/venv/**',
+      '**/__pycache__/**',
+      'server/data/**',
+    ],
   },
   // Next.js flat config (includes TS + React + Next rules + ignores)
   ...nextCoreWebVitals,
@@ -27,4 +36,3 @@ const config = [
 ];
 
 export default config;
-

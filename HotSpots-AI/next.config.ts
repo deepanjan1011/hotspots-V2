@@ -3,15 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   async rewrites() {
-    // On Vercel, API routing is handled by vercel.json → Python serverless function.
-    // Only proxy in local development where Python runs on localhost:8000.
-    if (process.env.VERCEL) return [];
+    // In local development, keep `/api/*` proxied to the FastAPI server.
+    // In deployed environments, the frontend should call the Azure backend
+    // directly via NEXT_PUBLIC_API_URL, which bypasses this rewrite entirely.
+    if (process.env.NEXT_PUBLIC_API_URL) return [];
     return [
       {
         source: '/api/:path*',
-        destination: process.env.API_URL
-          ? `${process.env.API_URL}/api/:path*`
-          : 'http://127.0.0.1:8000/api/:path*',
+        destination: 'http://127.0.0.1:8000/api/:path*',
       },
     ];
   },

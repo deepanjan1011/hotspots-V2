@@ -5,18 +5,14 @@ import os
 import rasterio
 import geopandas as gpd
 from rasterio.plot import show
+from project_paths import PUBLIC_DIR, SERVER_DATA_DIR
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "HotSpots-AI/server/data")
-OUTPUT_DIR = os.path.join(BASE_DIR, "HotSpots-AI/public")
-
-LST_PATH = os.path.join(DATA_DIR, "chennai_lst.tif")
-NDVI_PATH = os.path.join(DATA_DIR, "chennai_ndvi.tif")
-BUILDINGS_PATH = os.path.join(DATA_DIR, "chennai_buildings.shp")
+LST_PATH = SERVER_DATA_DIR / "chennai_lst.tif"
+NDVI_PATH = SERVER_DATA_DIR / "chennai_ndvi.tif"
+BUILDINGS_PATH = SERVER_DATA_DIR / "chennai_buildings.shp"
 
 # Ensure output directory exists
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(PUBLIC_DIR, exist_ok=True)
 
 def plot_raster(tif_path, title, cmap, filename):
     try:
@@ -46,7 +42,7 @@ def plot_raster(tif_path, title, cmap, filename):
             ax.set_title(title)
             ax.axis('off') # Cleaner look for UI
             
-            save_path = os.path.join(OUTPUT_DIR, filename)
+            save_path = PUBLIC_DIR / filename
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Saved {filename}")
             plt.close(fig)
@@ -74,7 +70,7 @@ def plot_buildings(shp_path, title, cmap, filename):
         ax.set_title(title)
         ax.axis('off')
         
-        save_path = os.path.join(OUTPUT_DIR, filename)
+        save_path = PUBLIC_DIR / filename
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"Saved {filename}")
         plt.close(fig)

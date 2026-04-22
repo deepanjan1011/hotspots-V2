@@ -6,17 +6,14 @@ import rasterio
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point, shape
+from project_paths import PUBLIC_DIR, SERVER_DATA_DIR
 
-# Data Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "HotSpots-AI/server/data")
+LST_PATH = SERVER_DATA_DIR / "new delhi_lst.tif"
+NDVI_PATH = SERVER_DATA_DIR / "new delhi_ndvi.tif"
+BUILDINGS_PATH = SERVER_DATA_DIR / "new delhi_buildings.shp"
 
-LST_PATH = os.path.join(DATA_DIR, "new delhi_lst.tif")
-NDVI_PATH = os.path.join(DATA_DIR, "new delhi_ndvi.tif")
-BUILDINGS_PATH = os.path.join(DATA_DIR, "new delhi_buildings.shp")
-
-OUTPUT_PATH_BACKEND = os.path.join(DATA_DIR, "vulnerability_points.geojson")
-OUTPUT_PATH_FRONTEND = os.path.join(BASE_DIR, "HotSpots-AI/public/vulnerability_points.geojson")
+OUTPUT_PATH_BACKEND = SERVER_DATA_DIR / "vulnerability_points.geojson"
+OUTPUT_PATH_FRONTEND = PUBLIC_DIR / "vulnerability_points.geojson"
 
 # New Delhi Bounding Box (Approximate, to focus sampling)
 MIN_LON, MIN_LAT = 77.10, 28.50

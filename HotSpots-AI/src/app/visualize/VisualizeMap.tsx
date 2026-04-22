@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { InteractiveHoverButton, InteractiveHoverBackButton } from '@/components/magicui/interactive-hover-button';
 import { AnimatedSubscribeButton } from '@/components/magicui/animated-subscribe-button';
+import { buildApiUrl } from '@/lib/api';
 
 // Suppress util._extend deprecation warning (from transitive dependencies)
 if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -143,7 +144,7 @@ export default function Visualize() {
 
   useEffect(() => {
     // Fetch config from the backend (Relative path works for both Local and Vercel)
-    fetch('/api/config')
+    fetch(buildApiUrl('/api/config'))
       .then(res => res.json())
       .then(config => {
         if (config.city_name) {
@@ -161,7 +162,7 @@ export default function Visualize() {
       })
       .catch(console.error);
 
-    fetch(`/api/vulnerability-points?v=${Date.now()}`) // FORCE FRESH FETCH
+    fetch(buildApiUrl(`/api/vulnerability-points?v=${Date.now()}`)) // FORCE FRESH FETCH
       .then((res) => res.json())
       .then((geojson) => {
         // [DEBUG] Log first few features to see if "health_risk" exists and is high
@@ -294,7 +295,7 @@ export default function Visualize() {
     setAiPlan(null);
     setChatHistory([]);
     try {
-      const res = await fetch('/api/generate-plan', {
+      const res = await fetch(buildApiUrl('/api/generate-plan'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -329,7 +330,7 @@ export default function Visualize() {
       // Determine city name from the search options if available, otherwise just use a generic 'Current City'
       // We know there's a config endpoint that returns 'city_name', but it's not stored in state directly.
       // We will add it to state or just fetch it. For now, assuming standard city or what's in searchOptions[0].
-      const res = await fetch('/api/chat', {
+      const res = await fetch(buildApiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -394,7 +395,7 @@ export default function Visualize() {
 
     setPlayingAudio(true);
     try {
-      const res = await fetch('/api/speak-plan', {
+      const res = await fetch(buildApiUrl('/api/speak-plan'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: aiPlan.plan.replace(/[#*-]/g, '') }) // Clean markdown for speech

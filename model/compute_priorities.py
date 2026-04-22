@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import json
 import os
+from project_paths import MODEL_DIR, SERVER_DATA_DIR
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, "server/data")
-IN_GEOJSON  = os.path.join(DATA_DIR, 'vulnerability_points.geojson')
-OUT_GEOJSON = os.path.join(DATA_DIR, 'tree_priority.geojson')
-ARTIFACTS_FILE = os.path.join(BASE_DIR, "model_artifacts.json")
+IN_GEOJSON  = SERVER_DATA_DIR / 'vulnerability_points.geojson'
+OUT_GEOJSON = SERVER_DATA_DIR / 'tree_priority.geojson'
+ARTIFACTS_FILE = MODEL_DIR / "model_artifacts.json"
 
 # Load weights
 if not os.path.exists(ARTIFACTS_FILE):
